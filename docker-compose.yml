@@ -1,0 +1,15 @@
+version: "3.8"
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_PATH=/app/data/go-diary.db
+      - JWT_SECRET=ahsanapp
+      - PORT=8080
+      - OPENAI="put-key-key"
+    volumes:
+      - ./data:/app/data
+      - ./static:/app/static
+      - ./templates:/app/templates

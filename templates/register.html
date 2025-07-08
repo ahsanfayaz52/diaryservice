@@ -1,0 +1,374 @@
+{{ define "content" }}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <i class="fas fa-book-open auth-logo"></i>
+            <h1>Create Your Account</h1>
+            <p class="auth-subtitle">Join Go Diary to start your journey</p>
+        </div>
+
+        {{ if .Error }}
+        <div class="auth-error">
+            <i class="fas fa-exclamation-circle"></i>
+            <span>{{ .Error }}</span>
+        </div>
+        {{ end }}
+
+        <form method="post" action="/register" autocomplete="off" class="auth-form">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <div class="input-with-icon">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="email" name="email" placeholder="you@example.com"
+                           value="" required autofocus
+                    />
+                </div>
+                {{ if .EmailError }}
+                <span class="field-error">{{ .EmailError }}</span>
+                {{ end }}
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="input-with-icon">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="password" name="password" placeholder="••••••••"
+                            />
+                </div>
+                {{ if .PasswordError }}
+                <span class="field-error">{{ .PasswordError }}</span>
+                {{ end }}
+            </div>
+
+            <div class="form-group">
+                <label for="confirm_password">Confirm Password</label>
+                <div class="input-with-icon">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="confirm_password" name="confirm_password"
+                           placeholder="••••••••" required {{ if .Error }}class="{{ if .PasswordError }}error-input{{ end }}"{{ end }} />
+                </div>
+            </div>
+
+            <div class="form-group terms-group">
+                <label class="terms-label">
+                    <input type="checkbox" name="terms" required {{ if .Terms }}checked{{ end }}>
+                    <span>I agree to the <a href="/terms" target="_blank">Terms of Service</a> and <a href="/privacy" target="_blank">Privacy Policy</a></span>
+                </label>
+                {{ if .TermsError }}
+                <span class="field-error">{{ .TermsError }}</span>
+                {{ end }}
+            </div>
+
+            <button type="submit" class="auth-button">
+                <i class="fas fa-user-plus"></i> Create Account
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            <p>Already have an account? <a href="/login" class="auth-link">Login here</a></p>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Auth Container Styles */
+    .auth-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: calc(100vh - 200px);
+        padding: 2rem;
+    }
+
+    .auth-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        padding: 2.5rem;
+        width: 100%;
+        max-width: 420px;
+        border: 1px solid var(--border);
+    }
+
+    .auth-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .auth-logo {
+        font-size: 2.5rem;
+        color: var(--primary);
+        margin-bottom: 1rem;
+    }
+
+    .auth-header h1 {
+        font-size: 1.75rem;
+        color: var(--text);
+        margin-bottom: 0.5rem;
+    }
+
+    .auth-subtitle {
+        color: var(--text-light);
+        font-size: 0.95rem;
+    }
+
+    /* Error Message Styles */
+    .auth-error {
+        background-color: #fff1f2;
+        color: var(--danger);
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        border: 1px solid #fecdd3;
+    }
+
+    .auth-error i {
+        font-size: 1rem;
+    }
+
+    .field-error {
+        color: var(--danger);
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+        display: block;
+    }
+
+    .error-input {
+        border-color: var(--danger) !important;
+        background-color: #fff8f8 !important;
+    }
+
+    .error-input:focus {
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+    }
+
+    /* Form Styles */
+    .auth-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .form-group label {
+        font-size: 0.9rem;
+        color: var(--text);
+        font-weight: 500;
+    }
+
+    .input-with-icon {
+        position: relative;
+    }
+
+    .input-with-icon i {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-light);
+        font-size: 0.95rem;
+    }
+
+    .input-with-icon input {
+        width: 100%;
+        padding: 0.75rem 1rem 0.75rem 2.5rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+        background-color: var(--secondary);
+    }
+
+    .input-with-icon input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+    }
+
+    /* Terms Checkbox */
+    .terms-group {
+        margin-top: 0.5rem;
+    }
+
+    .terms-label {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        color: var(--text-light);
+        font-size: 0.9rem;
+        cursor: pointer;
+        line-height: 1.4;
+    }
+
+    .terms-label input {
+        margin-top: 0.2rem;
+        flex-shrink: 0;
+        width: 1rem;
+        height: 1rem;
+        accent-color: var(--primary);
+    }
+
+    .terms-label a {
+        color: var(--primary);
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .terms-label a:hover {
+        text-decoration: underline;
+    }
+
+    /* Button Styles */
+    .auth-button {
+        background-color: var(--primary);
+        color: white;
+        border: none;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .auth-button:hover {
+        background-color: var(--primary-dark);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+    }
+
+    .auth-button:active {
+        transform: translateY(0);
+    }
+
+    /* Footer Styles */
+    .auth-footer {
+        margin-top: 1.5rem;
+        text-align: center;
+        color: var(--text-light);
+        font-size: 0.9rem;
+    }
+
+    .auth-link {
+        color: var(--primary);
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .auth-link:hover {
+        text-decoration: underline;
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+        .auth-card {
+            padding: 1.5rem;
+        }
+
+        .auth-container {
+            padding: 1rem;
+            min-height: calc(100vh - 150px);
+        }
+
+        .terms-label {
+            font-size: 0.85rem;
+        }
+    }
+</style>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('.auth-form');
+        const passwordInput = document.getElementById('password');
+        const confirmPasswordInput = document.getElementById('confirm_password');
+        const termsCheckbox = document.querySelector('input[name="terms"]');
+
+        // Create error message elements
+        const confirmPasswordError = document.createElement('span');
+        confirmPasswordError.className = 'field-error';
+        confirmPasswordError.id = 'confirm-password-error';
+        confirmPasswordInput.parentNode.parentNode.appendChild(confirmPasswordError);
+
+        const termsError = document.createElement('span');
+        termsError.className = 'field-error';
+        termsError.id = 'terms-error';
+        termsCheckbox.parentNode.parentNode.appendChild(termsError);
+
+        function validatePasswordMatch() {
+            if (passwordInput.value !== confirmPasswordInput.value) {
+                confirmPasswordError.textContent = 'Passwords do not match';
+                confirmPasswordInput.classList.add('error-input');
+                return false;
+            } else {
+                confirmPasswordError.textContent = '';
+                confirmPasswordInput.classList.remove('error-input');
+                return true;
+            }
+        }
+
+        function validateTerms() {
+            if (!termsCheckbox.checked) {
+                termsError.textContent = 'You must accept the terms and conditions';
+                return false;
+            } else {
+                termsError.textContent = '';
+                return true;
+            }
+        }
+
+        // Real-time validation for password match
+        confirmPasswordInput.addEventListener('input', validatePasswordMatch);
+        passwordInput.addEventListener('input', validatePasswordMatch);
+
+        // Real-time validation for terms checkbox
+        termsCheckbox.addEventListener('change', validateTerms);
+
+        // Form submission validation
+        form.addEventListener('submit', function(e) {
+            let isValid = true;
+
+            // Validate password match
+            if (!validatePasswordMatch()) {
+                isValid = false;
+            }
+
+            // Validate terms checkbox
+            if (!validateTerms()) {
+                isValid = false;
+            }
+
+            // Prevent form submission if validation fails
+            if (!isValid) {
+                e.preventDefault();
+
+                // Scroll to first error if any
+                const firstError = document.querySelector('.field-error:not(:empty)');
+                if (firstError) {
+                    firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        });
+
+        // Initialize validation on page load if fields are already filled
+        if (passwordInput.value || confirmPasswordInput.value) {
+            validatePasswordMatch();
+        }
+        if (termsCheckbox.checked) {
+            validateTerms();
+        }
+    });
+</script>
+{{ end }}
