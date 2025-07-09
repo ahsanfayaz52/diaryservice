@@ -838,5 +838,22 @@ DATE: ${noteDate}
             tag.style.border = `1px solid ${colors[colorIndex]}30`;
         });
     });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+
+        // Check if this is the initial load (no query parameters)
+        if (urlParams.toString() === '' && !sessionStorage.getItem('filtersModified')) {
+            // Redirect to pinned view by default
+            window.location.href = window.location.pathname + '?filter_pinned=true';
+        }
+
+        // When any filter link is clicked, set a flag
+        document.querySelectorAll('[data-filter], .tag-pill, .sort-select').forEach(element => {
+            element.addEventListener('click', function() {
+                sessionStorage.setItem('filtersModified', 'true');
+            });
+        });
+    });
 </script>
 {{ end }}
