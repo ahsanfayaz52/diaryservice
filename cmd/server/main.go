@@ -22,6 +22,10 @@ func main() {
 
 	r := mux.NewRouter()
 
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/login", http.StatusFound)
+	})
+
 	r.HandleFunc("/register", handlers.RegisterHandler(dbConn)).Methods("GET", "POST")
 	r.HandleFunc("/login", handlers.LoginHandler(dbConn, jwtService)).Methods("GET", "POST")
 	r.HandleFunc("/logout", handlers.LogoutHandler()).Methods("GET")

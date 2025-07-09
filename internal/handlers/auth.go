@@ -88,7 +88,7 @@ func LoginHandler(db *sql.DB, jwtService *auth.JWTService) http.HandlerFunc {
 			Expires:  time.Now().Add(72 * time.Hour),
 		})
 
-		http.Redirect(w, r, "/dashboard?filter_pinned=true", http.StatusSeeOther)
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 	}
 }
 

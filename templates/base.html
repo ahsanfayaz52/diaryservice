@@ -310,13 +310,13 @@
 <header>
     <div class="header-container">
         <div class="logo">
-            <a href="/dashboard?filter_pinned=true">
+            <a href="/dashboard">
                 <i class="fas fa-book-open logo-icon"></i>
                 <span>AI Note Assistant</span>
             </a>
         </div>
         <nav>
-            <a href="/dashboard?filter_pinned=true" class="{{ if eq .CurrentPage "dashboard" }}active{{ end }}">Dashboard</a>
+            <a href="/dashboard" class="{{ if eq .CurrentPage "dashboard" }}active{{ end }}">Dashboard</a>
             <a href="/notes/new" class="new-note-btn {{ if eq .CurrentPage "new" }}active{{ end }}">
             <i class="fas fa-plus"></i> New Note
             </a>
