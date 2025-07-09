@@ -18,7 +18,7 @@ func DashboardHandler(db *sql.DB) http.HandlerFunc {
 		query := r.URL.Query()
 
 		search := query.Get("search")
-		tag := query.Get("tag")
+		tags := query["tag"]
 		filterPinned := query.Get("filter_pinned") == "true"
 		filterStarred := query.Get("filter_starred") == "true"
 		sortBy := query.Get("sort_by")
@@ -38,10 +38,17 @@ func DashboardHandler(db *sql.DB) http.HandlerFunc {
 			where = append(where, "(title LIKE ? OR content LIKE ?)")
 			args = append(args, "%"+search+"%", "%"+search+"%")
 		}
-		if tag != "" {
-			where = append(where, "tags LIKE ?")
-			args = append(args, "%"+tag+"%")
+
+		// Modified tag filtering to use OR condition
+		if len(tags) > 0 {
+			tagConditions := []string{}
+			for _, tag := range tags {
+				tagConditions = append(tagConditions, "tags LIKE ?")
+				args = append(args, "%"+tag+"%")
+			}
+			where = append(where, "("+strings.Join(tagConditions, " OR ")+")")
 		}
+
 		if filterPinned {
 			where = append(where, "is_pinned = 1")
 		}
@@ -61,8 +68,36 @@ func DashboardHandler(db *sql.DB) http.HandlerFunc {
 			orderBy = "title DESC"
 		}
 
+		// Get total notes count
+		var totalNotes int
+		err := db.QueryRow("SELECT COUNT(*) FROM notes WHERE user_id = ?", userID).Scan(&totalNotes)
+		if err != nil {
+			http.Error(w, "Failed to count notes", http.StatusInternalServerError)
+			log.Println("Count error:", err)
+			return
+		}
+
+		// Get pinned count
+		var pinnedCount int
+		err = db.QueryRow("SELECT COUNT(*) FROM notes WHERE user_id = ? AND is_pinned = 1", userID).Scan(&pinnedCount)
+		if err != nil {
+			http.Error(w, "Failed to count pinned notes", http.StatusInternalServerError)
+			log.Println("Count error:", err)
+			return
+		}
+
+		// Get starred count
+		var starredCount int
+		err = db.QueryRow("SELECT COUNT(*) FROM notes WHERE user_id = ? AND is_starred = 1", userID).Scan(&starredCount)
+		if err != nil {
+			http.Error(w, "Failed to count starred notes", http.StatusInternalServerError)
+			log.Println("Count error:", err)
+			return
+		}
+
+		// Get filtered count
 		var totalCount int
-		err := db.QueryRow("SELECT COUNT(*) FROM notes "+whereClause, args...).Scan(&totalCount)
+		err = db.QueryRow("SELECT COUNT(*) FROM notes "+whereClause, args...).Scan(&totalCount)
 		if err != nil {
 			http.Error(w, "Failed to count notes", http.StatusInternalServerError)
 			log.Println("Count error:", err)
@@ -104,17 +139,69 @@ func DashboardHandler(db *sql.DB) http.HandlerFunc {
 			}
 		}
 
-		tmpl := template.Must(template.New("dashboard.html").Funcs(template.FuncMap{
+		// Template functions
+		funcMap := template.FuncMap{
 			"split":    strings.Split,
 			"add":      func(a, b int) int { return a + b },
 			"sub":      func(a, b int) int { return a - b },
 			"safeHTML": func(s string) template.HTML { return template.HTML(s) },
-		}).ParseFiles("templates/dashboard.html", "templates/base.html"))
+			"len":      func(slice []models.Note) int { return len(slice) },
+			"removeQueryParam": func(param string) string {
+				q := r.URL.Query()
+				q.Del(param)
+				return "?" + q.Encode()
+			},
+			"addQueryParam": func(param, value string) string {
+				q := r.URL.Query()
+				q.Set(param, value)
+				q.Del("page") // Reset page to 1 when applying a filter
+				return "?" + q.Encode()
+			},
+			"toggleTag": func(tag string) string {
+				q := r.URL.Query()
+				tags := q["tag"]
+				found := false
+				for i, t := range tags {
+					if t == tag {
+						tags = append(tags[:i], tags[i+1:]...)
+						found = true
+						break
+					}
+				}
+				if !found {
+					tags = append(tags, tag)
+				}
+				q.Del("tag")
+				for _, t := range tags {
+					q.Add("tag", t)
+				}
+				q.Del("page") // Reset page to 1 when changing tags
+				return "?" + q.Encode()
+			},
+			"containsTag": func(tag string) bool {
+				for _, t := range tags {
+					if t == tag {
+						return true
+					}
+				}
+				return false
+			},
+			"addPageParam": func(newPage int) string {
+				q := r.URL.Query()
+				q.Set("page", strconv.Itoa(newPage))
+				return "?" + q.Encode()
+			},
+		}
+
+		tmpl := template.Must(template.New("dashboard.html").Funcs(funcMap).ParseFiles("templates/dashboard.html", "templates/base.html"))
 
 		err = tmpl.ExecuteTemplate(w, "base.html", map[string]interface{}{
 			"Notes":         notes,
+			"TotalNotes":    totalNotes,
+			"PinnedCount":   pinnedCount,
+			"StarredCount":  starredCount,
 			"Search":        search,
-			"Tag":           tag,
+			"SelectedTags":  tags,
 			"TagCloud":      tagMap,
 			"FilterPinned":  filterPinned,
 			"FilterStarred": filterStarred,
