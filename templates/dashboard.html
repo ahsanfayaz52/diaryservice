@@ -2,14 +2,7 @@
 <div class="dashboard">
     <!-- Header Section -->
     <header class="dashboard-header">
-        <div class="header-content">
-            <h1 class="header-title">
-                <svg class="logo-icon" viewBox="0 0 24 24">
-                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
-                </svg>
-                Notes Dashboard
-            </h1>
-        </div>
+
 
         <!-- Stats Cards -->
         <div class="stats-grid">
@@ -320,6 +313,7 @@
     /* Header Styles */
     .dashboard-header {
         margin-bottom: 2rem;
+        border-radius: var(--radius-lg);
     }
 
     .header-content {
@@ -776,7 +770,7 @@
 
     .note-tags .tag {
         padding: 0.25rem 0.75rem;
-        font-size: 0.75rem;
+        font-size: 0.8rem;
     }
 
     .note-actions {
@@ -1090,7 +1084,7 @@ DATE: ${noteDate}
             const colorIndex = Math.abs(hash) % colors.length;
             tag.style.backgroundColor = `${colors[colorIndex]}15`;
             tag.style.color = colors[colorIndex];
-            tag.style.border = `1px solid ${colors[colorIndex]}30`;
+            tag.style.border = `2px solid ${colors[colorIndex]}30`;
         });
     });
 
