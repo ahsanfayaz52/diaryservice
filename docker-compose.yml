@@ -8,7 +8,7 @@ services:
       - DATABASE_PATH=/app/data/go-diary.db
       - JWT_SECRET=ahsanapp
       - PORT=8080
-      - OPENAI="put-key-key"
+      - OPENAI=""
     volumes:
       - ./data:/app/data
       - ./static:/app/static

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/ahsanfayaz52/diaryservice/internal/config"
 	"net/http"
 	"strings"
@@ -16,6 +17,17 @@ type AIRequest struct {
 
 type AIResponse struct {
 	Text string `json:"text"`
+}
+
+type MeetingSummaryRequest struct {
+	Transcript       string `json:"transcript"`
+	IdentifySpeakers bool   `json:"identify_speakers"`
+}
+
+type MeetingSummaryResponse struct {
+	Summary     string   `json:"summary"`
+	KeyPoints   []string `json:"key_points"`
+	ActionItems []string `json:"action_items"`
 }
 
 func AIProcessHandler(w http.ResponseWriter, r *http.Request) {
@@ -110,4 +122,90 @@ Text to correct:
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+func SummarizeMeetingHandler(w http.ResponseWriter, r *http.Request) {
+	cfg := config.LoadConfig()
+
+	// Parse request
+	var req MeetingSummaryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if req.Transcript == "" {
+		http.Error(w, "Transcript is required", http.StatusBadRequest)
+		return
+	}
+
+	// Initialize OpenAI client
+	client := openai.NewClient(cfg.OpenAIKey)
+
+	// Create structured prompt for meeting summary
+	prompt := fmt.Sprintf(`Analyze this meeting transcript and provide:
+1. A concise summary (2-3 paragraphs)
+2. important discussion points as bullet points
+3. Clear action items with owners if specified
+4. Format the response as JSON with "summary", "key_points", and "action_items" fields according to this type MeetingSummaryResponse struct {
+	Summary     string  
+	KeyPoints   []string
+	ActionItems []string
+}
+
+%s
+
+Respond ONLY with valid JSON containing these three fields. The transcript is:`, req.Transcript)
+
+	// Call OpenAI API
+	resp, err := client.CreateChatCompletion(r.Context(), openai.ChatCompletionRequest{
+		Model: openai.GPT3Dot5Turbo,
+		Messages: []openai.ChatCompletionMessage{
+			{
+				Role:    openai.ChatMessageRoleUser,
+				Content: prompt,
+			},
+		},
+		Temperature: 0.2, // Very low for consistent JSON output
+		TopP:        0.8,
+		ResponseFormat: &openai.ChatCompletionResponseFormat{
+			Type: openai.ChatCompletionResponseFormatTypeJSONObject,
+		},
+	})
+	if err != nil {
+		http.Error(w, "AI processing failed: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Parse the JSON response
+	var summaryResponse MeetingSummaryResponse
+	responseText := resp.Choices[0].Message.Content
+
+	// Clean up the response if needed
+	if !strings.Contains(responseText, "{") {
+		// Handle cases where the response isn't properly formatted JSON
+		summaryResponse = MeetingSummaryResponse{
+			Summary:     "Could not parse summary",
+			KeyPoints:   []string{"Error parsing key points"},
+			ActionItems: []string{"Error parsing action items"},
+		}
+	} else {
+		// Try to parse the JSON
+		if err := json.Unmarshal([]byte(responseText), &summaryResponse); err != nil {
+			fmt.Println(err.Error())
+			http.Error(w, "Failed to parse AI response: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Ensure we have at least minimal content
+	if len(summaryResponse.KeyPoints) == 0 {
+		summaryResponse.KeyPoints = []string{"No key points identified"}
+	}
+	if len(summaryResponse.ActionItems) == 0 {
+		summaryResponse.ActionItems = []string{"No action items identified"}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(summaryResponse)
 }

@@ -56,13 +56,21 @@ func LoginHandler(db *sql.DB, jwtService *auth.JWTService) http.HandlerFunc {
 		row := db.QueryRow("SELECT id, password FROM users WHERE email=?", email)
 		err := row.Scan(&user.ID, &user.Password)
 		if err != nil {
-			http.Error(w, "Invalid email or password", http.StatusUnauthorized)
+			// Pass error message to template
+			tmpl.ExecuteTemplate(w, "base.html", map[string]interface{}{
+				"Error": "Invalid email or password",
+				"Email": email, // Preserve the email so user doesn't have to retype
+			})
 			return
 		}
 
 		err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 		if err != nil {
-			http.Error(w, "Invalid email or password", http.StatusUnauthorized)
+			// Pass error message to template
+			tmpl.ExecuteTemplate(w, "base.html", map[string]interface{}{
+				"Error": "Invalid email or password",
+				"Email": email, // Preserve the email so user doesn't have to retype
+			})
 			return
 		}
 
@@ -72,7 +80,6 @@ func LoginHandler(db *sql.DB, jwtService *auth.JWTService) http.HandlerFunc {
 			return
 		}
 
-		// Send token as cookie (you can also send as header if preferred)
 		http.SetCookie(w, &http.Cookie{
 			Name:     "token",
 			Value:    token,

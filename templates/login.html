@@ -7,12 +7,20 @@
             <p class="auth-subtitle">Login to access your diary</p>
         </div>
 
+        {{ if .Error }}
+        <div class="auth-error">
+            <i class="fas fa-exclamation-circle"></i>
+            <span>{{ .Error }}</span>
+        </div>
+        {{ end }}
+
         <form method="post" action="/login" autocomplete="off" class="auth-form">
             <div class="form-group">
                 <label for="email">Email Address</label>
                 <div class="input-with-icon">
                     <i class="fas fa-envelope"></i>
-                    <input type="email" id="email" name="email" placeholder="you@example.com" required autofocus />
+                    <input type="email" id="email" name="email" placeholder="you@example.com"
+                           value="{{if .Email}}{{.Email}}{{end}}" required autofocus />
                 </div>
             </div>
 
@@ -221,6 +229,22 @@
             padding: 1rem;
             min-height: calc(100vh - 150px);
         }
+    }
+
+    .auth-error {
+        background-color: #fee2e2;
+        color: #b91c1c;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .auth-error i {
+        font-size: 1rem;
     }
 </style>
 {{ end }}

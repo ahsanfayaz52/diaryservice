@@ -26,6 +26,7 @@ func main() {
 	r.HandleFunc("/login", handlers.LoginHandler(dbConn, jwtService)).Methods("GET", "POST")
 	r.HandleFunc("/logout", handlers.LogoutHandler()).Methods("GET")
 	r.HandleFunc("/ai/process", handlers.AIProcessHandler).Methods("POST")
+	r.HandleFunc("/ai/summarize-meeting", handlers.SummarizeMeetingHandler).Methods("POST")
 
 	// Authenticated routes
 	s := r.PathPrefix("/").Subrouter()

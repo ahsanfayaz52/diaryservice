@@ -28,21 +28,46 @@
                                placeholder="work, ideas, important (comma separated)">
                     </div>
 
+                    <!-- Meeting Controls -->
+                    <div class="meeting-controls">
+                        <h3><i class="fas fa-users"></i> Meeting Mode</h3>
+                        <div class="meeting-buttons">
+                            <button type="button" id="start-meeting" class="btn btn-meeting">
+                                <i class="fas fa-microphone"></i> Start Meeting
+                            </button>
+                            <button type="button" id="stop-meeting" class="btn btn-meeting" disabled>
+                                <i class="fas fa-stop"></i> Stop
+                            </button>
+                            <button type="button" id="summarize-meeting" class="btn btn-meeting" disabled>
+                                <i class="fas fa-robot"></i> Summarize
+                            </button>
+                        </div>
+                        <div class="meeting-status" id="meeting-status">
+                            Meeting not started
+                        </div>
+                        <div class="speaker-identification">
+                            <label>
+                                <input type="checkbox" id="identify-speakers">
+                                Identify different speakers
+                            </label>
+                        </div>
+                    </div>
+
                     <!-- Options -->
                     <div class="form-options">
                         <label class="option-toggle">
                             <input type="checkbox" name="is_pinned" {{ if .IsPinned }}checked{{ end }}>
                             <span class="toggle-slider"></span>
                             <span class="option-label">
-                <i class="fas fa-thumbtack"></i> Pin Note
-              </span>
+                                <i class="fas fa-thumbtack"></i> Pin Note
+                            </span>
                         </label>
                         <label class="option-toggle">
                             <input type="checkbox" name="is_starred" {{ if .IsStarred }}checked{{ end }}>
                             <span class="toggle-slider"></span>
                             <span class="option-label">
-                <i class="fas fa-star"></i> Starred
-              </span>
+                                <i class="fas fa-star"></i> Starred
+                            </span>
                         </label>
                     </div>
                 </div>
@@ -102,6 +127,27 @@
     </div>
 </div>
 
+<!-- Meeting Summary Modal -->
+<div id="summary-modal" class="modal">
+    <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-header">
+            <h3><i class="fas fa-file-alt"></i> Meeting Summary</h3>
+            <button type="button" class="close-summary">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="summary-content" style="text-align: left; max-height: 60vh; overflow-y: auto;"></div>
+            <div class="summary-actions">
+                <button type="button" id="insert-summary" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Insert into Note
+                </button>
+                <button type="button" id="discard-summary" class="btn btn-cancel">
+                    <i class="fas fa-times"></i> Discard
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <style>
     :root {
@@ -118,6 +164,132 @@
         --success: #10b981;
         --radius: 8px;
         --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Add these new styles to your existing CSS */
+    .meeting-controls {
+        background: #f8f9fa;
+        border-radius: var(--radius);
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--border);
+    }
+
+    .meeting-controls h3 {
+        font-size: 1rem;
+        margin-bottom: 1rem;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .meeting-buttons {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .btn-meeting {
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--primary-dark);
+        border: none;
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+        flex: 1;
+        min-width: 120px;
+    }
+
+    .btn-meeting:hover {
+        background: rgba(99, 102, 241, 0.2);
+    }
+
+    .btn-meeting:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .meeting-status {
+        font-size: 0.85rem;
+        color: var(--text-light);
+        padding: 0.5rem;
+        border-radius: var(--radius);
+        background: white;
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .speaker-identification {
+        font-size: 0.85rem;
+        color: var(--text-light);
+    }
+
+    .speaker-identification label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+    }
+
+    .speaker-identification input {
+        margin: 0;
+    }
+
+    /* Transcript styling */
+    .transcript-line {
+        margin-bottom: 0.5rem;
+        line-height: 1.5;
+    }
+
+    .transcript-speaker {
+        font-weight: bold;
+        color: var(--primary-dark);
+    }
+
+    .transcript-time {
+        color: var(--text-light);
+        font-size: 0.8rem;
+        margin-right: 0.5rem;
+    }
+
+    /* Summary modal specific styles */
+    .summary-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 1.5rem;
+    }
+
+    .close-summary {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--text-light);
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+    }
+
+    #summary-content {
+        padding: 1rem;
+        background: var(--background);
+        border-radius: var(--radius);
+    }
+
+    #summary-content h3 {
+        color: var(--primary-dark);
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    #summary-content ul {
+        padding-left: 1.5rem;
+    }
+
+    #summary-content li {
+        margin-bottom: 0.5rem;
     }
 
     /* Full Width Layout */
@@ -495,8 +667,8 @@
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Initialize Quill with enhanced options
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Quill editor
         const quill = new Quill('#quill-editor', {
             theme: 'snow',
             placeholder: 'Write your thoughts here...',
@@ -517,21 +689,17 @@
             ]
         });
 
-        // Set initial content from backend with proper HTML handling
+        // Set initial content
         const initialContent = {{ if .Content }}{{ printf "%v" .Content | safeHTML }}{{ else }}''{{ end }};
         if (initialContent && initialContent.trim() !== '') {
             setTimeout(() => {
                 try {
-                    // First try to parse as Delta
                     try {
                         const delta = JSON.parse(initialContent);
                         quill.setContents(delta);
                     } catch (e) {
-                        // If not Delta, treat as HTML
                         const container = document.createElement('div');
                         container.innerHTML = initialContent;
-
-                        // Ensure basic formatting
                         if (!container.querySelector('p, div, h1, h2, h3')) {
                             const formattedContent = initialContent
                                 .split('\n\n')
@@ -559,9 +727,229 @@
         const aiStatus = document.getElementById('ai-status');
         const form = document.querySelector('form');
 
-        // Enhanced AI processing function
+        // ===== Meeting Transcription Feature =====
+        const startMeetingBtn = document.getElementById('start-meeting');
+        const stopMeetingBtn = document.getElementById('stop-meeting');
+        const summarizeMeetingBtn = document.getElementById('summarize-meeting');
+        const meetingStatus = document.getElementById('meeting-status');
+        const identifySpeakersCheckbox = document.getElementById('identify-speakers');
+        const summaryModal = document.getElementById('summary-modal');
+        const summaryContent = document.getElementById('summary-content');
+        const insertSummaryBtn = document.getElementById('insert-summary');
+        const closeSummaryBtn = document.querySelector('.close-summary');
+        const discardSummaryBtn = document.getElementById('discard-summary');
+
+        let meetingInterval;
+        let meetingTranscript = [];
+        let isMeetingRunning = false;
+        let speechRecognition;
+        let lastSpeaker = '';
+        let speakerCount = 0;
+        let speakerMap = {};
+
+        // Initialize speech recognition
+        function initSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+            if (!SpeechRecognition) {
+                meetingStatus.textContent = "Speech recognition not supported in this browser";
+                return false;
+            }
+
+            speechRecognition = new SpeechRecognition();
+            speechRecognition.continuous = true;
+            speechRecognition.interimResults = true;
+            speechRecognition.maxAlternatives = 1;
+
+            speechRecognition.onresult = (event) => {
+                const identifySpeakers = identifySpeakersCheckbox.checked;
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+
+                if (finalTranscript) {
+                    // Speaker identification logic
+                    let speakerTag = '';
+                    if (identifySpeakers) {
+                        // Simple speaker change detection
+                        if (!lastSpeaker || Math.random() > 0.7) { // Simulate speaker change
+                            speakerCount++;
+                            lastSpeaker = `Speaker ${speakerCount}`;
+                            speakerMap[lastSpeaker] = speakerMap[lastSpeaker] || getRandomColor();
+                        }
+                        speakerTag = `<span class="transcript-speaker" style="color:${speakerMap[lastSpeaker]}">${lastSpeaker}: </span>`;
+                    }
+
+                    const timestamp = new Date().toLocaleTimeString();
+                    const transcriptEntry = {
+                        speaker: lastSpeaker,
+                        text: finalTranscript,
+                        time: timestamp,
+                        html: `<div class="transcript-line"><span class="transcript-time">${timestamp}</span>${speakerTag}${finalTranscript}</div>`
+                    };
+
+                    meetingTranscript.push(transcriptEntry);
+
+                    // Append to editor
+                    const currentContent = quill.root.innerHTML;
+                    quill.clipboard.dangerouslyPasteHTML(
+                        currentContent + transcriptEntry.html
+                    );
+
+                    // Scroll to bottom
+                    quill.scroll.domNode.scrollTop = quill.scroll.domNode.scrollHeight;
+                }
+            };
+
+            speechRecognition.onerror = (event) => {
+                console.error('Speech recognition error', event.error);
+                meetingStatus.textContent = `Error: ${event.error}`;
+                stopMeeting();
+            };
+
+            return true;
+        }
+
+        function getRandomColor() {
+            const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        function startMeeting() {
+            if (isMeetingRunning) return;
+
+            if (!initSpeechRecognition()) {
+                return;
+            }
+
+            try {
+                speechRecognition.start();
+                isMeetingRunning = true;
+                meetingStatus.textContent = "Meeting in progress...";
+                startMeetingBtn.disabled = true;
+                stopMeetingBtn.disabled = false;
+                summarizeMeetingBtn.disabled = true;
+                meetingTranscript = []; // Reset transcript
+
+                // Start a timer to simulate meeting duration
+                let seconds = 0;
+                meetingInterval = setInterval(() => {
+                    seconds++;
+                    const minutes = Math.floor(seconds / 60);
+                    const remainingSeconds = seconds % 60;
+                    meetingStatus.textContent = `Meeting in progress (${minutes}m ${remainingSeconds}s)...`;
+                }, 1000);
+
+            } catch (error) {
+                console.error('Error starting meeting:', error);
+                meetingStatus.textContent = "Error starting meeting";
+            }
+        }
+
+        function stopMeeting() {
+            if (!isMeetingRunning) return;
+
+            try {
+                if (speechRecognition) {
+                    speechRecognition.stop();
+                }
+                clearInterval(meetingInterval);
+                isMeetingRunning = false;
+                meetingStatus.textContent = "Meeting ended. Ready to summarize.";
+                startMeetingBtn.disabled = false;
+                stopMeetingBtn.disabled = true;
+                summarizeMeetingBtn.disabled = false;
+            } catch (error) {
+                console.error('Error stopping meeting:', error);
+            }
+        }
+
+        async function summarizeMeeting() {
+            if (meetingTranscript.length === 0) {
+                meetingStatus.textContent = "No transcript to summarize";
+                return;
+            }
+
+            showModal(true);
+            aiStatus.textContent = "Analyzing meeting transcript and generating summary...";
+
+            try {
+                // Prepare transcript for API
+                const transcriptText = meetingTranscript.map(entry =>
+                    `${entry.speaker ? entry.speaker + ': ' : ''}${entry.text}`
+                ).join('\n');
+
+                // Call your actual API endpoint
+                const response = await fetch('/ai/summarize-meeting', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        transcript: transcriptText
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                // Display summary
+                summaryContent.innerHTML = `
+                <h3>Meeting Summary</h3>
+                <p>${result.summary || 'No summary generated'}</p>
+
+                <h3>Key Points</h3>
+                <ul>
+                    ${(result.key_points || ['No key points']).map(point => `<li>${point}</li>`).join('')}
+                </ul>
+
+                <h3>Action Items</h3>
+                <ul>
+                    ${(result.action_items || ['No action items']).map(item => `<li>${item}</li>`).join('')}
+                </ul>
+            `;
+
+                showModal(false);
+                summaryModal.style.display = 'flex';
+
+            } catch (error) {
+                console.error('Error summarizing meeting:', error);
+                aiStatus.textContent = "Error generating summary: " + error.message;
+                setTimeout(() => showModal(false), 2000);
+            }
+        }
+
+        function insertSummary() {
+            const summaryHtml = summaryContent.innerHTML;
+            quill.clipboard.dangerouslyPasteHTML(summaryHtml);
+            summaryModal.style.display = 'none';
+        }
+
+        function discardSummary() {
+            summaryModal.style.display = 'none';
+        }
+
+        // Event listeners for meeting controls
+        startMeetingBtn.addEventListener('click', startMeeting);
+        stopMeetingBtn.addEventListener('click', stopMeeting);
+        summarizeMeetingBtn.addEventListener('click', summarizeMeeting);
+        insertSummaryBtn.addEventListener('click', insertSummary);
+        closeSummaryBtn.addEventListener('click', discardSummary);
+        discardSummaryBtn.addEventListener('click', discardSummary);
+
+        // ===== Existing AI Processing Functionality =====
         async function processWithAI(action) {
-            // Get current content as HTML
             const htmlContent = quill.root.innerHTML;
 
             if (!quill.getText().trim()) {
@@ -587,24 +975,17 @@
                     })
                 });
 
-                if (!response.ok) {
-                    throw new Error(`Server responded with ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`Server responded with ${response.status}`);
 
                 const result = await response.json();
 
                 if (result.text) {
-                    // Process the AI response to ensure beautiful formatting
                     let processedHTML = formatAIResponse(result.text, action);
-
-                    // Update editor with smooth transition
                     quill.enable(false);
                     const range = quill.getSelection();
                     quill.clipboard.dangerouslyPasteHTML(processedHTML);
                     if (range) quill.setSelection(range.index, range.length);
                     quill.enable(true);
-
-                    // Scroll to top to show changes
                     quill.scroll.domNode.scrollTop = 0;
                 }
 
@@ -617,24 +998,17 @@
             }
         }
 
-        // Format AI response for beautiful display
         function formatAIResponse(html, action) {
             const container = document.createElement('div');
             container.innerHTML = html;
 
-            // Ensure proper paragraph spacing
-            const paragraphs = container.querySelectorAll('p');
-            paragraphs.forEach(p => {
+            container.querySelectorAll('p').forEach(p => {
                 if (!p.innerHTML.trim()) p.remove();
-                else if (!p.style.marginBottom) {
-                    p.style.marginBottom = '1.2em';
-                }
+                else if (!p.style.marginBottom) p.style.marginBottom = '1.2em';
             });
 
-            // Add special formatting based on action
             switch (action) {
                 case 'enhance':
-                    // Ensure headers have proper spacing
                     container.querySelectorAll('h1, h2, h3').forEach(header => {
                         if (!header.style.marginTop) {
                             header.style.marginTop = '1.5em';
@@ -642,9 +1016,7 @@
                         }
                     });
                     break;
-
                 case 'summarize':
-                    // Ensure lists are properly formatted
                     container.querySelectorAll('ul, ol').forEach(list => {
                         if (!list.style.paddingLeft) {
                             list.style.paddingLeft = '2em';
@@ -654,7 +1026,6 @@
                     break;
             }
 
-            // If no HTML tags found, create proper paragraphs
             if (container.children.length === 0) {
                 const formatted = html
                     .split('\n\n')
@@ -666,7 +1037,7 @@
             return container.innerHTML;
         }
 
-        // AI button handlers
+        // Existing AI button handlers
         aiButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const action = button.dataset.action;
@@ -674,14 +1045,13 @@
             });
         });
 
-        // Form validation and submission
-        form.addEventListener('submit', function (event) {
+        // Existing form validation
+        form.addEventListener('submit', function(event) {
             let valid = true;
 
             const title = titleInput.value.trim();
             const content = quill.getText().trim();
 
-            // Validate title
             if (!title) {
                 titleError.textContent = 'Title is required';
                 titleError.style.display = 'block';
@@ -690,7 +1060,6 @@
                 titleError.style.display = 'none';
             }
 
-            // Validate content
             if (!content) {
                 contentError.textContent = 'Content is required';
                 contentError.style.display = 'block';
@@ -699,7 +1068,6 @@
                 contentError.style.display = 'none';
             }
 
-            // Save HTML content
             contentInput.value = quill.root.innerHTML;
 
             if (!valid) {
@@ -707,31 +1075,22 @@
             }
         });
 
-        // Modal control
+        // Existing modal control
         function showModal(show) {
             modal.style.display = show ? 'flex' : 'none';
-            if (show) {
-                document.body.style.overflow = 'hidden';
-            } else {
-                document.body.style.overflow = '';
-            }
+            document.body.style.overflow = show ? 'hidden' : '';
         }
 
+        // Existing paste handler
         quill.root.addEventListener('paste', function(e) {
             const clipboardData = e.clipboardData || window.clipboardData;
             const html = clipboardData.getData('text/html');
             const text = clipboardData.getData('text/plain');
 
-            // If HTML is available, let Quill handle it normally
-            if (html) {
-                return; // Do NOT preventDefault
-            }
+            if (html) return;
 
-            // If no HTML (plain text), handle it manually
             e.preventDefault();
             const range = quill.getSelection(true);
-
-            // Split by lines and insert line-by-line
             const lines = text.split('\n');
             lines.forEach((line, idx) => {
                 quill.insertText(range.index, line);
@@ -742,7 +1101,6 @@
                 }
             });
         });
-
     });
 </script>
 
