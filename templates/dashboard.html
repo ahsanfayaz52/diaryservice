@@ -1,60 +1,77 @@
 {{ define "content" }}
-<div class="dashboard-container">
-    <!-- Header with Stats -->
-    <div class="dashboard-header">
-        <h1>Dashboard</h1>
-        <div class="stats-container">
+<div class="dashboard">
+    <!-- Header Section -->
+    <header class="dashboard-header">
+        <div class="header-content">
+            <h1 class="header-title">
+                <svg class="logo-icon" viewBox="0 0 24 24">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                </svg>
+                Notes Dashboard
+            </h1>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-value">{{ .TotalNotes }}</div>
                 <div class="stat-label">Total Notes</div>
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/>
+                    </svg>
+                </div>
             </div>
             <div class="stat-card">
                 <div class="stat-value">{{ .PinnedCount }}</div>
                 <div class="stat-label">Pinned</div>
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M18 1l-6 4-6-4-6 5v7l12 10 12-10v-7z"/>
+                    </svg>
+                </div>
             </div>
             <div class="stat-card">
                 <div class="stat-value">{{ .StarredCount }}</div>
                 <div class="stat-label">Starred</div>
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                    </svg>
+                </div>
             </div>
         </div>
-    </div>
+    </header>
 
     <!-- Main Content Area -->
-    <div class="dashboard-content">
-        <!-- Filters Sidebar -->
-        <aside class="filters-sidebar">
-            <div class="filter-section">
-                <div class="search-box">
-                    <form method="get" action="/dashboard" id="search-form" class="search-form">
-                        <div class="search-input-container">
-                            <input type="text" name="search" placeholder="Search notes..."
-                                   value="{{ .Search }}" class="search-input">
-                            <button type="submit" class="search-button">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18">
-                                    <path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 0 0 1.48-5.34c-.47-2.78-2.79-5-5.59-5.34a6.505 6.505 0 0 0-7.27 7.27c.34 2.8 2.56 5.12 5.34 5.59a6.5 6.5 0 0 0 5.34-1.48l.27.28v.79l4.25 4.25c.41.41 1.08.41 1.49 0 .41-.41.41-1.08 0-1.49L15.5 14zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-                                </svg>
-                            </button>
-                        </div>
-                        <input type="hidden" name="page" value="1">
-                    </form>
-                </div>
+    <div class="dashboard-main">
+        <!-- Filters Panel -->
+        <aside class="filters-panel">
+            <div class="search-box">
+                <form method="get" action="/dashboard" id="search-form">
+                    <input type="text" name="search" placeholder="Search notes..." value="{{ .Search }}">
+                    <button type="submit">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 0 0 1.48-5.34c-.47-2.78-2.79-5-5.59-5.34a6.505 6.505 0 0 0-7.27 7.27c.34 2.8 2.56 5.12 5.34 5.59a6.5 6.5 0 0 0 5.34-1.48l.27.28v.79l4.25 4.25c.41.41 1.08.41 1.49 0 .41-.41.41-1.08 0-1.49L15.5 14zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                        </svg>
+                    </button>
+                    <input type="hidden" name="page" value="1">
+                </form>
             </div>
 
             <div class="filter-section">
                 <h3>Quick Filters</h3>
-                <div class="filter-options">
+                <div class="filter-buttons">
                     <a href="{{ if .FilterPinned }}{{ removeQueryParam "filter_pinned" }}{{ else }}{{ addQueryParam "filter_pinned" "true" }}{{ end }}"
-                    class="filter-tag {{ if .FilterPinned }}active{{ end }}"
-                    data-filter="pinned">
-                    <svg width="16" height="16" viewBox="0 0 24 24" class="filter-icon">
+                    class="filter-btn {{ if .FilterPinned }}active{{ end }}">
+                    <svg viewBox="0 0 24 24">
                         <path d="M18 1l-6 4-6-4-6 5v7l12 10 12-10v-7z"/>
                     </svg>
                     Pinned
                     </a>
                     <a href="{{ if .FilterStarred }}{{ removeQueryParam "filter_starred" }}{{ else }}{{ addQueryParam "filter_starred" "true" }}{{ end }}"
-                    class="filter-tag {{ if .FilterStarred }}active{{ end }}"
-                    data-filter="starred">
-                    <svg width="16" height="16" viewBox="0 0 24 24" class="filter-icon">
+                    class="filter-btn {{ if .FilterStarred }}active{{ end }}">
+                    <svg viewBox="0 0 24 24">
                         <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
                     </svg>
                     Starred
@@ -69,8 +86,8 @@
                     {{ if .FilterPinned }}<input type="hidden" name="filter_pinned" value="true">{{ end }}
                     {{ if .FilterStarred }}<input type="hidden" name="filter_starred" value="true">{{ end }}
                     {{ range .SelectedTags }}<input type="hidden" name="tag" value="{{ . }}">{{ end }}
-                    <input type="hidden" name="page" value="1"> <!-- Always reset to page 1 when sorting -->
-                    <select name="sort_by" onchange="this.form.submit()" class="sort-select">
+                    <input type="hidden" name="page" value="1">
+                    <select name="sort_by" onchange="this.form.submit()">
                         <option value="created_at_desc" {{ if eq .SortBy "created_at_desc" }}selected{{ end }}>Newest First</option>
                         <option value="created_at_asc" {{ if eq .SortBy "created_at_asc" }}selected{{ end }}>Oldest First</option>
                         <option value="title_asc" {{ if eq .SortBy "title_asc" }}selected{{ end }}>Title (A-Z)</option>
@@ -80,12 +97,16 @@
             </div>
 
             <div class="filter-section">
-                <h3>Tags</h3>
+                <div class="tags-header">
+                    <h3>Tags</h3>
+                    {{ if .SelectedTags }}
+                    <a href="" class="clear-tags">Clear</a>
+                    {{ end }}
+                </div>
                 <div class="tags-container">
                     {{ if .TagCloud }}
                     {{ range $tag, $count := .TagCloud }}
-                    <a href="{{ toggleTag $tag }}"
-                       class="tag-pill {{ if containsTag $tag }}active{{ end }}">
+                    <a href="{{ toggleTag $tag }}" class="tag {{ if containsTag $tag }}active{{ end }}">
                         {{ $tag }} <span class="tag-count">{{ $count }}</span>
                     </a>
                     {{ end }}
@@ -97,7 +118,7 @@
         </aside>
 
         <!-- Notes Grid -->
-        <main class="notes-grid-container">
+        <main class="notes-container">
             <div class="notes-header">
                 <h2>
                     {{ if .FilterPinned }}Pinned Notes
@@ -105,21 +126,34 @@
                     {{ else if .Search }}Search Results
                     {{ else }}All Notes{{ end }}
                     {{ if .SelectedTags }}
-                    with tags: {{ range .SelectedTags }}<span class="active-tag">{{ . }}</span>{{ end }}
+                    <span class="filtered-by">filtered by:</span>
+                    {{ range .SelectedTags }}<span class="active-tag">{{ . }}</span>{{ end }}
                     {{ end }}
                 </h2>
-                <span class="notes-count">{{ len .Notes }} notes</span>
+                <div class="notes-count">{{ len .Notes }} notes</div>
             </div>
 
             {{ if .Notes }}
             <div class="notes-grid">
                 {{ range .Notes }}
-                <div class="note-card {{ if .IsPinned }}pinned{{ end }} {{ if .IsStarred }}starred{{ end }}">
+                <article class="note-card {{ if .IsPinned }}pinned{{ end }} {{ if .IsStarred }}starred{{ end }}">
                     <div class="note-header">
                         <h3 class="note-title">{{ .Title }}</h3>
                         <div class="note-badges">
-                            {{ if .IsPinned }}<span class="badge pinned-badge">Pinned</span>{{ end }}
-                            {{ if .IsStarred }}<span class="badge starred-badge">Starred</span>{{ end }}
+                            {{ if .IsPinned }}
+                            <span class="badge pinned">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M18 1l-6 4-6-4-6 5v7l12 10 12-10v-7z"/>
+                                </svg>
+                            </span>
+                            {{ end }}
+                            {{ if .IsStarred }}
+                            <span class="badge starred">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                                </svg>
+                            </span>
+                            {{ end }}
                         </div>
                     </div>
 
@@ -136,47 +170,76 @@
                             {{ end }}
                         </div>
                         <div class="note-actions">
-                            <a href="/notes/view/{{ .ID }}" class="action-button view-button" title="View note">
-                                <svg width="16" height="16" viewBox="0 0 24 24">
+                            <a href="/notes/view/{{ .ID }}" class="action-btn view" title="View note">
+                                <svg viewBox="0 0 24 24">
                                     <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
                                 </svg>
                             </a>
-                            <button class="action-button download-button"
-                                    data-title="{{ .Title }}"
-                                    data-content="{{ .Content | safeHTML }}"
-                                    title="Download note">
-                                <svg width="16" height="16" viewBox="0 0 24 24">
+                            <button class="action-btn download" data-title="{{ .Title }}" data-content="{{ .Content | safeHTML }}" title="Download note">
+                                <svg viewBox="0 0 24 24">
                                     <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
                                 </svg>
                             </button>
                         </div>
                     </div>
-                    <div class="note-date">{{ .CreatedAt.Format "Jan 2, 2006 at 3:04 PM" }}</div>
+                    <div class="note-meta">
+                        <time datetime="{{ .CreatedAt.Format "2006-01-02T15:04:05Z07:00" }}">{{ .CreatedAt.Format "Jan 2, 2006 at 3:04 PM" }}</time>
+                    </div>
+                </article>
+                {{ end }}
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination">
+                {{ if gt .Page 1 }}
+                <a href="{{ addPageParam (sub .Page 1) }}" class="page-btn">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/>
+                    </svg>
+                    Previous
+                </a>
+                {{ end }}
+
+                <div class="page-numbers">
+                    {{ if .Notes }}
+                        {{ if gt .Page 1 }}
+                        <a href="{{ addPageParam (sub .Page 1) }}" class="page-link">Previous</a>
+                        {{ end }}
+
+                        <span class="page-info">Page {{ .Page }} of {{ .TotalPages }}</span>
+
+                        {{ if lt .Page .TotalPages }}
+                        <a href="{{ addPageParam (add .Page 1) }}" class="page-link">Next</a>
+                        {{ end }}
+                    {{ end }}
                 </div>
+
+                {{ if lt .Page .TotalPages }}
+                <a href="{{ addPageParam (add .Page 1) }}" class="page-btn">
+                    Next
+                    <svg viewBox="0 0 24 24">
+                        <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+                    </svg>
+                </a>
                 {{ end }}
             </div>
             {{ else }}
             <div class="empty-state">
-                <svg class="empty-icon" viewBox="0 0 24 24">
-                    <path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 9c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3zm0-4c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm6 10H6v-1.53c0-3.5 3.56-4.33 6-4.33s6 .83 6 4.33V18zm-9.5-2h7v-1.2c0-1.8-2.44-2.8-3.5-2.8s-3.5 1-3.5 2.8v1.2z"/>
-                </svg>
+                <div class="empty-illustration">
+                    <svg viewBox="0 0 200 200">
+                        <path fill="#E5E7EB" d="M100 0C44.8 0 0 44.8 0 100s44.8 100 100 100 100-44.8 100-100S155.2 0 100 0zm0 180c-44.1 0-80-35.9-80-80s35.9-80 80-80 80 35.9 80 80-35.9 80-80 80z"/>
+                        <path fill="#E5E7EB" d="M140 70H60v60h80V70zm-10 50H70V80h60v40z"/>
+                        <path fill="#E5E7EB" d="M85 85h30v30H85z"/>
+                    </svg>
+                </div>
                 <h3>No notes found</h3>
                 <p>Try adjusting your filters or create a new note</p>
-                <a href="/notes/new" class="create-button">Create Note</a>
-            </div>
-            {{ end }}
-
-            {{ if .Notes }}
-            <div class="pagination">
-                {{ if gt .Page 1 }}
-                <a href="{{ addPageParam (sub .Page 1) }}" class="page-link">Previous</a>
-                {{ end }}
-
-                <span class="page-info">Page {{ .Page }} of {{ .TotalPages }}</span>
-
-                {{ if lt .Page .TotalPages }}
-                <a href="{{ addPageParam (add .Page 1) }}" class="page-link">Next</a>
-                {{ end }}
+                <a href="/notes/new" class="create-btn">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                    </svg>
+                    Create Note
+                </a>
             </div>
             {{ end }}
         </main>
@@ -184,18 +247,7 @@
 </div>
 
 <style>
-    /* Add this new style for active tags in the header */
-    .active-tag {
-        display: inline-block;
-        margin-left: 0.5rem;
-        padding: 0.25rem 0.5rem;
-        background: var(--primary-light);
-        color: white;
-        border-radius: 12px;
-        font-size: 0.75rem;
-    }
-
-    /* Rest of your existing styles... */
+    /* Color Variables */
     :root {
         --primary: #4f46e5;
         --primary-light: #6366f1;
@@ -206,22 +258,61 @@
         --info: #3b82f6;
         --light: #f9fafb;
         --dark: #111827;
-        --gray: #6b7280;
-        --light-gray: #e5e7eb;
-        --border-radius: 8px;
-        --card-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        --gray-100: #f3f4f6;
+        --gray-200: #e5e7eb;
+        --gray-300: #d1d5db;
+        --gray-400: #9ca3af;
+        --gray-500: #6b7280;
+        --gray-600: #4b5563;
+        --gray-700: #374151;
+        --gray-800: #1f2937;
+        --gray-900: #111827;
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.08);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.07);
+        --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.06);
+        --radius-sm: 0.125rem;
+        --radius: 0.25rem;
+        --radius-md: 0.375rem;
+        --radius-lg: 1rem;
+        --radius-xl: 0.75rem;
+        --radius-2xl: 1rem;
+        --radius-full: 9999px;
     }
 
-
     /* Base Styles */
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
     body {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         line-height: 1.5;
-        color: var(--dark);
+        color: var(--gray-900);
+        background-color: var(--gray-100);
     }
 
-    .dashboard-container {
-        max-width: 1400px;
+    a {
+        text-decoration: none;
+        color: inherit;
+    }
+
+    button {
+        background: none;
+        border: none;
+        cursor: pointer;
+    }
+
+    svg {
+        fill: currentColor;
+    }
+
+    /* Dashboard Layout */
+    .dashboard {
+        max-width: 1600px;
         margin: 0 auto;
         padding: 1.5rem;
     }
@@ -231,121 +322,171 @@
         margin-bottom: 2rem;
     }
 
-    .dashboard-header h1 {
-        font-size: 1.75rem;
-        font-weight: 700;
-        margin-bottom: 1rem;
-        color: var(--dark);
-    }
-
-    .stats-container {
+    .header-content {
         display: flex;
-        gap: 1rem;
+        justify-content: space-between;
+        align-items: center;
         margin-bottom: 1.5rem;
     }
 
+    .header-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .logo-icon {
+        width: 28px;
+        height: 28px;
+        fill: var(--primary);
+    }
+
+    .new-note-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1rem;
+        background: var(--primary);
+        color: white;
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+
+    .new-note-btn:hover {
+        background: var(--primary-dark);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow);
+    }
+
+    .new-note-btn svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1rem;
+    }
+
     .stat-card {
-        flex: 1;
         background: white;
-        border-radius: var(--border-radius);
-        padding: 1rem;
-        box-shadow: var(--card-shadow);
-        text-align: center;
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
     }
 
     .stat-value {
-        font-size: 1.5rem;
+        font-size: 2rem;
         font-weight: 700;
-        color: var(--primary);
+        color: var(--gray-900);
         margin-bottom: 0.25rem;
     }
 
     .stat-label {
         font-size: 0.875rem;
-        color: var(--gray);
+        color: var(--gray-500);
     }
 
-    /* Dashboard Layout */
-    .dashboard-content {
+    .stat-icon {
+        position: absolute;
+        right: 1.5rem;
+        top: 1.5rem;
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--gray-100);
+        border-radius: var(--radius-full);
+        color: var(--primary);
+    }
+
+    .stat-icon svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    /* Main Content */
+    .dashboard-main {
         display: grid;
-        grid-template-columns: 260px 1fr;
+        grid-template-columns: 280px 1fr;
         gap: 1.5rem;
     }
 
     @media (max-width: 1024px) {
-        .dashboard-content {
+        .dashboard-main {
             grid-template-columns: 1fr;
         }
     }
 
-    /* Filters Sidebar */
-    .filters-sidebar {
+    /* Filters Panel */
+    .filters-panel {
         background: white;
-        border-radius: var(--border-radius);
-        padding: 1.25rem;
-        box-shadow: var(--card-shadow);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
         height: fit-content;
         position: sticky;
         top: 1rem;
     }
 
-    .search-input-container {
+    .search-box {
+        margin-bottom: 1.5rem;
+    }
+
+    .search-box form {
         position: relative;
-        display: flex;
-        align-items: center;
     }
 
-    .search-input {
+    .search-box input[type="text"] {
         width: 100%;
-        padding: 0.75rem 2.5rem 0.75rem 1rem;
-        border: 1px solid var(--light-gray);
-        border-radius: var(--border-radius);
-        font-size: 0.9375rem;
-        transition: all 0.2s;
+        padding: 0.75rem 1rem 0.75rem 2.5rem;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+        background-color: var(--gray-100);
     }
 
-    .search-input:focus {
+    .search-box input[type="text"]:focus {
         outline: none;
         border-color: var(--primary);
         box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        background-color: white;
     }
 
-    .search-button {
+    .search-box button {
         position: absolute;
-        right: 0.75rem;
-        background: none;
-        border: none;
-        padding: 0;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--gray);
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--gray-400);
     }
 
-    .search-button svg {
+    .search-box button svg {
         width: 18px;
         height: 18px;
     }
 
-    .search-button:hover {
-        color: var(--primary);
-    }
-
-    .filters-sidebar {
-        background: white;
-        border-radius: var(--border-radius);
-        padding: 1.25rem;
-        box-shadow: var(--card-shadow);
-        height: fit-content;
-        position: sticky;
-        top: 1rem;
-    }
-
     .filter-section {
-        margin-bottom: 1.75rem;
+        margin-bottom: 1.5rem;
         padding-bottom: 1.5rem;
-        border-bottom: 1px solid var(--light-gray);
+        border-bottom: 1px solid var(--gray-200);
     }
 
     .filter-section:last-child {
@@ -357,85 +498,111 @@
     .filter-section h3 {
         font-size: 0.9375rem;
         font-weight: 600;
-        color: var(--dark);
+        color: var(--gray-800);
         margin-bottom: 1rem;
-        display: flex;
-        align-items: center;
     }
 
-    .filter-section h3 svg {
-        margin-right: 0.5rem;
-        width: 16px;
-        height: 16px;
-        fill: var(--gray);
-    }
-
-    .filter-options {
+    .filter-buttons {
         display: flex;
-        flex-wrap: wrap;
+        flex-direction: column;
         gap: 0.5rem;
     }
 
-    .filter-tag {
-        display: inline-flex;
+    .filter-btn {
+        display: flex;
         align-items: center;
-        gap: 0.375rem;
-        padding: 0.5rem 0.875rem;
-        background: var(--light);
-        border-radius: 20px;
-        font-size: 0.8125rem;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        background: var(--gray-100);
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
         font-weight: 500;
-        color: var(--dark);
-        text-decoration: none;
-        transition: all 0.2s;
-        border: 1px solid var(--light-gray);
+        color: var(--gray-700);
+        transition: all 0.2s ease;
     }
 
-    .filter-tag:hover {
-        background: var(--light-gray);
+    .filter-btn:hover {
+        background: var(--gray-200);
     }
 
-    .filter-tag.active {
+    .filter-btn.active {
         background: var(--primary);
         color: white;
-        border-color: var(--primary);
     }
 
-    .filter-tag.active .filter-icon {
+    .filter-btn.active svg {
         fill: white;
     }
 
-    .filter-icon {
-        fill: var(--gray);
-        width: 14px;
-        height: 14px;
+    .filter-btn svg {
+        width: 16px;
+        height: 16px;
+        fill: var(--gray-500);
+    }
+
+    .sort-form select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+        background-color: var(--gray-100);
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236b7280'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.75rem center;
+        background-size: 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .sort-form select:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        background-color: white;
+    }
+
+    .tags-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .clear-tags {
+        font-size: 0.8125rem;
+        color: var(--primary);
+        font-weight: 500;
+    }
+
+    .clear-tags:hover {
+        text-decoration: underline;
     }
 
     .tags-container {
         display: flex;
         flex-wrap: wrap;
         gap: 0.5rem;
-        margin-bottom: 0.5rem;
     }
 
-    .tag-pill {
+    .tag {
         display: inline-flex;
         align-items: center;
-        padding: 0.375rem 0.75rem;
-        background: var(--light);
-        border-radius: 20px;
+        padding: 0.5rem 0.875rem;
+        background: var(--gray-100);
+        border-radius: var(--radius-full);
         font-size: 0.8125rem;
-        color: var(--dark);
-        text-decoration: none;
-        transition: all 0.2s;
-        border: 1px solid var(--light-gray);
+        color: var(--gray-700);
+        transition: all 0.2s ease;
+        border: 1px solid var(--gray-200);
     }
 
-    .tag-pill:hover {
-        background: var(--light-gray);
+    .tag:hover {
+        background: var(--gray-200);
     }
 
-    .tag-pill.active {
+    .tag.active {
         background: var(--primary);
         color: white;
         border-color: var(--primary);
@@ -447,49 +614,17 @@
         opacity: 0.8;
     }
 
-    .clear-tags {
-        margin-top: 0.5rem;
+    .no-tags {
+        font-size: 0.875rem;
+        color: var(--gray-500);
     }
 
-    .clear-tag-link {
-        font-size: 0.8125rem;
-        color: var(--primary);
-        text-decoration: none;
-        transition: all 0.2s;
-    }
-
-    .clear-tag-link:hover {
-        text-decoration: underline;
-    }
-
-    /* Improved sort select */
-    .sort-select {
-        width: 100%;
-        padding: 0.75rem 1rem;
-        border: 1px solid var(--light-gray);
-        border-radius: var(--border-radius);
-        font-size: 0.9375rem;
-        background-color: white;
-        cursor: pointer;
-        appearance: none;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236b7280'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd'/%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 0.75rem center;
-        background-size: 1rem;
-    }
-
-    .sort-select:focus {
-        outline: none;
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-    }
-
-    /* Notes Grid */
-    .notes-grid-container {
+    /* Notes Container */
+    .notes-container {
         background: white;
-        border-radius: var(--border-radius);
+        border-radius: var(--radius-lg);
         padding: 1.5rem;
-        box-shadow: var(--card-shadow);
+        box-shadow: var(--shadow);
     }
 
     .notes-header {
@@ -502,93 +637,125 @@
     .notes-header h2 {
         font-size: 1.25rem;
         font-weight: 600;
-        color: var(--dark);
+        color: var(--gray-900);
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .filtered-by {
+        color: var(--gray-500);
+        font-weight: 400;
+    }
+
+    .active-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.75rem;
+        background: var(--primary-light);
+        color: white;
+        border-radius: var(--radius-full);
+        font-size: 0.8125rem;
+        font-weight: 500;
     }
 
     .notes-count {
         font-size: 0.875rem;
-        color: var(--gray);
-        background: var(--light);
-        padding: 0.375rem 0.75rem;
-        border-radius: 20px;
+        color: var(--gray-500);
+        background: var(--gray-100);
+        padding: 0.5rem 1rem;
+        border-radius: var(--radius-full);
     }
 
+    /* Notes Grid */
     .notes-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 1.25rem;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
     }
 
     /* Note Card */
     .note-card {
         background: white;
-        border: 1px solid var(--light-gray);
-        border-radius: var(--border-radius);
-        padding: 1.25rem;
-        transition: all 0.2s;
-        position: relative;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        transition: all 0.3s ease;
         display: flex;
         flex-direction: column;
+        box-shadow: var(--shadow);
     }
 
     .note-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        border-color: var(--primary-light);
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
     }
 
     .note-card.pinned {
-        border-left: 3px solid var(--primary);
+        border-left: 0px solid var(--primary);
     }
 
     .note-card.starred {
-        border-right: 3px solid var(--warning);
+        border-right: 0px solid var(--warning);
     }
 
     .note-header {
-        margin-bottom: 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
     }
 
     .note-title {
         font-size: 1.125rem;
         font-weight: 600;
-        color: var(--dark);
+        color: var(--gray-900);
         margin: 0;
         line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
     }
 
     .note-badges {
-        position: absolute;
-        top: 1rem;
-        right: 1rem;
         display: flex;
-        gap: 0.375rem;
+        gap: 0.5rem;
     }
 
     .badge {
-        font-size: 0.6875rem;
-        font-weight: 500;
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border-radius: var(--radius-full);
+        padding: 0.25rem;
     }
 
-    .pinned-badge {
-        background: rgba(79, 70, 229, 0.1);
+    .badge svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .pinned {
+        background: rgba(79, 70, 229, 0.09);
         color: var(--primary);
     }
 
-    .starred-badge {
-        background: rgba(245, 158, 11, 0.1);
+    .starred {
+        background: rgba(245, 158, 11, 0.09);
         color: var(--warning);
     }
 
     .note-content {
-        color: var(--dark);
+        color: var(--gray-700);
         font-size: 0.9375rem;
-        line-height: 1.5;
-        margin-bottom: 1rem;
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
         display: -webkit-box;
-        -webkit-line-clamp: 4;
+        -webkit-line-clamp: 5;
         -webkit-box-orient: vertical;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -604,16 +771,12 @@
     .note-tags {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.375rem;
+        gap: 0.5rem;
     }
 
-    .tag {
-        background: var(--light);
-        color: var(--dark);
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        font-size: 0.6875rem;
-        font-weight: 500;
+    .note-tags .tag {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.75rem;
     }
 
     .note-actions {
@@ -621,35 +784,36 @@
         gap: 0.5rem;
     }
 
-    .action-button {
+    .action-btn {
         width: 32px;
         height: 32px;
-        border-radius: 6px;
+        border-radius: var(--radius-md);
+        border: 0.5px solid black;
         display: flex;
         align-items: center;
         justify-content: center;
         background: var(--light);
-        border: none;
-        color: var(--gray);
-        cursor: pointer;
-        transition: all 0.2s;
+        color: var(--dark);
+        transition: all 0.2s ease;
     }
 
-    .action-button:hover {
+    .action-btn:hover {
         background: var(--primary);
         color: white;
     }
 
-    .action-button svg {
+    .action-btn svg {
         width: 16px;
         height: 16px;
-        fill: currentColor;
     }
 
-    .note-date {
+    .note-meta {
+        margin-top: 1rem;
+    }
+
+    .note-meta time {
         font-size: 0.75rem;
-        color: var(--gray);
-        margin-top: 0.75rem;
+        color: var(--gray-500);
     }
 
     /* Empty State */
@@ -658,37 +822,45 @@
         padding: 3rem 2rem;
     }
 
-    .empty-icon {
-        width: 64px;
-        height: 64px;
-        margin-bottom: 1rem;
+    .empty-illustration {
+        width: 160px;
+        height: 160px;
+        margin: 0 auto 1.5rem;
         opacity: 0.5;
     }
 
     .empty-state h3 {
         font-size: 1.25rem;
-        color: var(--dark);
+        color: var(--gray-900);
         margin-bottom: 0.5rem;
     }
 
     .empty-state p {
-        color: var(--gray);
+        color: var(--gray-500);
         margin-bottom: 1.5rem;
     }
 
-    .create-button {
-        display: inline-block;
+    .create-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
         padding: 0.75rem 1.5rem;
         background: var(--primary);
         color: white;
-        border-radius: var(--border-radius);
+        border-radius: var(--radius-md);
         font-weight: 500;
-        text-decoration: none;
-        transition: all 0.2s;
+        transition: all 0.2s ease;
     }
 
-    .create-button:hover {
+    .create-btn:hover {
         background: var(--primary-dark);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow);
+    }
+
+    .create-btn svg {
+        width: 16px;
+        height: 16px;
     }
 
     /* Pagination */
@@ -697,38 +869,121 @@
         justify-content: center;
         align-items: center;
         gap: 1rem;
-        margin-top: 2rem;
+        margin-top: 3rem;
     }
 
-    .page-link {
-        padding: 0.5rem 1rem;
-        background: var(--light);
-        border-radius: var(--border-radius);
-        color: var(--dark);
-        text-decoration: none;
+    .page-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1.25rem;
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-md);
+        color: var(--gray-700);
         font-size: 0.875rem;
-        transition: all 0.2s;
+        font-weight: 500;
+        transition: all 0.2s ease;
     }
 
-    .page-link:hover {
+    .page-btn:hover {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+
+    .page-btn svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .page-numbers {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .page-number {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+        color: var(--gray-700);
+        transition: all 0.2s ease;
+    }
+
+    .page-number:hover {
+        background: var(--gray-100);
+    }
+
+    .page-number.active {
         background: var(--primary);
         color: white;
     }
 
-    .page-info {
-        font-size: 0.875rem;
-        color: var(--gray);
+    .page-ellipsis {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        color: var(--gray-500);
     }
 
     /* Responsive Adjustments */
     @media (max-width: 768px) {
-        .stats-container {
+        .dashboard {
+            padding: 1rem;
+        }
+
+        .header-content {
             flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .notes-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
         }
 
         .notes-grid {
             grid-template-columns: 1fr;
         }
+
+        .pagination {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .page-numbers {
+            order: -1;
+            margin-bottom: 0.5rem;
+        }
+    }
+
+    /* Animation */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .note-card {
+        animation: fadeIn 0.3s ease-out forwards;
+    }
+
+    /* Tag coloring */
+    .note-tags .tag {
+        background: #f3f4f6;
+        color: var(--dark);
+        border: 1px solid #e5e7eb;
     }
 </style>
 
@@ -781,7 +1036,7 @@
         }
 
         // Set up download buttons
-        document.querySelectorAll('.download-button').forEach(button => {
+        document.querySelectorAll('.download').forEach(button => {
             button.addEventListener('click', function() {
                 const title = this.getAttribute('data-title');
                 const htmlContent = this.getAttribute('data-content');
@@ -790,7 +1045,7 @@
                 const noteTitle = card.querySelector('.note-title')?.textContent || 'Untitled Note';
                 const noteContent = htmlToFormattedText(htmlContent);
                 const noteTags = Array.from(card.querySelectorAll('.tag')).map(tag => tag.textContent).join(', ');
-                const noteDate = card.querySelector('.note-date')?.textContent || '';
+                const noteDate = card.querySelector('time')?.textContent || '';
                 const isPinned = card.classList.contains('pinned') ? '📌 ' : '';
                 const isStarred = card.classList.contains('starred') ? '⭐ ' : '';
 
@@ -824,9 +1079,9 @@ DATE: ${noteDate}
             });
         });
 
-        // Tag coloring
+        // Tag coloring for note tags
         const colors = ['#4f46e5', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
-        document.querySelectorAll('.tag').forEach(tag => {
+        document.querySelectorAll('.note-tags .tag').forEach(tag => {
             const text = tag.textContent.toLowerCase();
             let hash = 0;
             for (let i = 0; i < text.length; i++) {
@@ -849,7 +1104,7 @@ DATE: ${noteDate}
         }
 
         // When any filter link is clicked, set a flag
-        document.querySelectorAll('[data-filter], .tag-pill, .sort-select').forEach(element => {
+        document.querySelectorAll('[data-filter], .tag, .sort-form select').forEach(element => {
             element.addEventListener('click', function() {
                 sessionStorage.setItem('filtersModified', 'true');
             });

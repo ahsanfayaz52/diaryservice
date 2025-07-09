@@ -28,7 +28,7 @@ func DashboardHandler(db *sql.DB) http.HandlerFunc {
 				page = parsed
 			}
 		}
-		pageSize := 9
+		pageSize := 6
 		offset := (page - 1) * pageSize
 
 		where := []string{"user_id = ?"}
