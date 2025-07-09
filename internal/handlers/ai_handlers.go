@@ -145,7 +145,7 @@ func SummarizeMeetingHandler(w http.ResponseWriter, r *http.Request) {
 	// Create structured prompt for meeting summary
 	prompt := fmt.Sprintf(`Analyze this meeting transcript and provide:
 1. A concise summary (2-3 paragraphs)
-2. important discussion points as bullet points
+2. All discussion points raised during meetings as bullet points
 3. Clear action items with owners if specified
 4. Format the response as JSON with "summary", "key_points", and "action_items" fields according to this type MeetingSummaryResponse struct {
 	Summary     string  

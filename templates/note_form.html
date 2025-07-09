@@ -747,6 +747,10 @@
         let speakerCount = 0;
         let speakerMap = {};
 
+        let recognitionRestartAttempts = 0;
+        const MAX_RESTART_ATTEMPTS = 12;
+        const RESTART_DELAY = 1000; // 1 second delay between restart attempts
+
         // Initialize speech recognition
         function initSpeechRecognition() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -761,7 +765,34 @@
             speechRecognition.interimResults = true;
             speechRecognition.maxAlternatives = 1;
 
+            // Add error handler to restart recognition if it stops unexpectedly
+            speechRecognition.onend = () => {
+                if (isMeetingRunning && recognitionRestartAttempts < MAX_RESTART_ATTEMPTS) {
+                    console.log('Speech recognition ended, attempting to restart...');
+                    recognitionRestartAttempts++;
+                    meetingStatus.textContent = `Reconnecting speech recognition (attempt ${recognitionRestartAttempts})...`;
+                    console.log(meetingStatus.textContent)
+
+                    setTimeout(() => {
+                        try {
+                            speechRecognition.start();
+                            console.log('Recognition restarted successfully');
+                            meetingStatus.textContent = `Meeting in progress (reconnected)`;
+                        } catch (e) {
+                            console.error('Error restarting recognition:', e);
+                            if (recognitionRestartAttempts >= MAX_RESTART_ATTEMPTS) {
+                                meetingStatus.textContent = "Error: Failed to reconnect after multiple attempts";
+                                stopMeeting();
+                            }
+                        }
+                    }, RESTART_DELAY);
+                }
+            };
+
             speechRecognition.onresult = (event) => {
+                // Reset restart attempts counter on successful recognition
+                recognitionRestartAttempts = 0;
+
                 const identifySpeakers = identifySpeakersCheckbox.checked;
                 let interimTranscript = '';
                 let finalTranscript = '';
@@ -811,21 +842,46 @@
 
             speechRecognition.onerror = (event) => {
                 console.error('Speech recognition error', event.error);
-                meetingStatus.textContent = `Error: ${event.error}`;
-                stopMeeting();
+
+                // Handle specific error codes
+                if (event.error === 'network') {
+                    meetingStatus.textContent = "Network error - trying to reconnect...";
+                    if (isMeetingRunning && recognitionRestartAttempts < MAX_RESTART_ATTEMPTS) {
+                        setTimeout(() => {
+                            try {
+                                speechRecognition.start();
+                            } catch (e) {
+                                console.error('Error restarting after network error:', e);
+                            }
+                        }, RESTART_DELAY);
+                    }
+                } else {
+                    meetingStatus.textContent = `Error: ${event.error}`;
+                    if (event.error === 'no-speech' || event.error === 'audio-capture') {
+                        // These errors might be recoverable
+                        if (isMeetingRunning && recognitionRestartAttempts < MAX_RESTART_ATTEMPTS) {
+                            setTimeout(() => {
+                                try {
+                                    speechRecognition.start();
+                                } catch (e) {
+                                    console.error('Error restarting after error:', e);
+                                }
+                            }, RESTART_DELAY);
+                        }
+                    } else {
+                        // For other errors, stop the meeting
+                        stopMeeting();
+                    }
+                }
             };
 
             return true;
         }
 
-        function getRandomColor() {
-            const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
-            return colors[Math.floor(Math.random() * colors.length)];
-        }
-
         function startMeeting() {
             if (isMeetingRunning) return;
 
+            recognitionRestartAttempts = 0; // Reset restart counter
             if (!initSpeechRecognition()) {
                 return;
             }
@@ -839,7 +895,7 @@
                 summarizeMeetingBtn.disabled = true;
                 meetingTranscript = []; // Reset transcript
 
-                // Start a timer to simulate meeting duration
+                // Start a timer to track meeting duration
                 let seconds = 0;
                 meetingInterval = setInterval(() => {
                     seconds++;
@@ -858,11 +914,14 @@
             if (!isMeetingRunning) return;
 
             try {
+                isMeetingRunning = false; // Set this first to prevent auto-restart
+                recognitionRestartAttempts = MAX_RESTART_ATTEMPTS; // Prevent any pending restarts
+
                 if (speechRecognition) {
+                    speechRecognition.onend = null; // Remove the restart handler
                     speechRecognition.stop();
                 }
                 clearInterval(meetingInterval);
-                isMeetingRunning = false;
                 meetingStatus.textContent = "Meeting ended. Ready to summarize.";
                 startMeetingBtn.disabled = false;
                 stopMeetingBtn.disabled = true;
