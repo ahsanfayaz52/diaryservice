@@ -49,10 +49,11 @@ func main() {
 	s.HandleFunc("/api/meeting/end", subscriptionHandler.MeetingEnd).Methods("POST")
 	s.HandleFunc("/api/subscription/checkout", subscriptionHandler.CreateCheckoutSession).Methods("POST")
 	s.HandleFunc("/api/subscription/status", subscriptionHandler.GetSubscriptionStatus).Methods("GET")
+	s.HandleFunc("/api/subscription/cancel", subscriptionHandler.CancelSubscription).Methods("POST")
 
 	s.HandleFunc("/dashboard", handlers.DashboardHandler(dbConn)).Methods("GET")
 	s.HandleFunc("/notes/new", handlers.NewNoteHandler(dbConn, stripeSvc)).Methods("GET", "POST")
-	s.HandleFunc("/notes/edit/{id}", handlers.EditNoteHandler(dbConn)).Methods("GET", "POST")
+	s.HandleFunc("/notes/edit/{id}", handlers.EditNoteHandler(dbConn, stripeSvc)).Methods("GET", "POST")
 	s.HandleFunc("/notes/delete/{id}", handlers.DeleteNoteHandler(dbConn)).Methods("POST")
 	s.HandleFunc("/notes/view/{id}", handlers.ViewNoteHandler(dbConn)).Methods("GET")
 

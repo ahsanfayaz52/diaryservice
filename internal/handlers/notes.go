@@ -224,7 +224,7 @@ func NewNoteHandler(db *sql.DB, stripeSvc *stripe.Service) http.HandlerFunc {
 			return
 		}
 
-		noteLimitExceeded, _, _ := stripeSvc.CheckUserLimits(db, userID)
+		noteLimitExceeded, remainingSeconds, isSubscribed, _ := stripeSvc.CheckUserLimits(db, userID)
 		if noteLimitExceeded {
 			http.Redirect(w, r, "/subscription?limit=notes", http.StatusSeeOther)
 			return
@@ -235,7 +235,15 @@ func NewNoteHandler(db *sql.DB, stripeSvc *stripe.Service) http.HandlerFunc {
 		}).ParseFiles("templates/note_form.html", "templates/base.html"))
 
 		if r.Method == http.MethodGet {
-			tmpl.ExecuteTemplate(w, "base.html", nil)
+			err := tmpl.ExecuteTemplate(w, "base.html", map[string]interface{}{
+				"IsSubscribed":     isSubscribed,
+				"RemainingSeconds": remainingSeconds,
+			})
+
+			if err != nil {
+				log.Printf("Template error: %v", err)
+				http.Error(w, "Error rendering template", http.StatusInternalServerError)
+			}
 			return
 		}
 
@@ -282,7 +290,7 @@ func NewNoteHandler(db *sql.DB, stripeSvc *stripe.Service) http.HandlerFunc {
 	}
 }
 
-func EditNoteHandler(db *sql.DB) http.HandlerFunc {
+func EditNoteHandler(db *sql.DB, stripeSvc *stripe.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		tmpl, err := template.New("base.html").Funcs(template.FuncMap{
 			"split":    strings.Split,
@@ -302,6 +310,8 @@ func EditNoteHandler(db *sql.DB) http.HandlerFunc {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
+
+		_, remainingSeconds, isSubscribed, _ := stripeSvc.CheckUserLimits(db, userID)
 
 		vars := mux.Vars(r)
 		noteID, err := strconv.Atoi(vars["id"])
@@ -330,11 +340,13 @@ func EditNoteHandler(db *sql.DB) http.HandlerFunc {
 			}
 
 			err = tmpl.ExecuteTemplate(w, "base.html", map[string]interface{}{
-				"Title":     note.Title,
-				"Content":   template.HTML(note.Content),
-				"Tags":      note.Tags,
-				"IsPinned":  note.IsPinned,
-				"IsStarred": note.IsStarred,
+				"Title":            note.Title,
+				"Content":          template.HTML(note.Content),
+				"Tags":             note.Tags,
+				"IsPinned":         note.IsPinned,
+				"IsStarred":        note.IsStarred,
+				"RemainingSeconds": remainingSeconds,
+				"IsSubscribed":     isSubscribed,
 			})
 			if err != nil {
 				http.Error(w, "Failed to render template", http.StatusInternalServerError)

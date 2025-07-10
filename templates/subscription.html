@@ -18,7 +18,8 @@
             {{ if .IsActive }}
             <p>Renews on: {{ .CurrentPeriodEnd.Format "Jan 2, 2006" }}</p>
             {{ else }}
-            <p>Free plan limits: {{ .NoteCount }}/10 notes, {{ .MeetingMinutes }}/5 meeting minutes</p>
+            <p>Free plan limits: {{ .NoteCount }}/10 notes, {{ .MeetingMinutes }}/60 meeting minutes</p>
+            <p>You can only create 10 notes regardless if you delete them</p>
             {{ end }}
         </div>
     </div>

@@ -137,7 +137,7 @@
         <div class="modal-body">
             <div id="summary-content" style="text-align: left; max-height: 60vh; overflow-y: auto;"></div>
             <div class="summary-actions">
-                <button type="button" id="insert-summary" class="btn btn-primary">
+                <button type="button" id="insert-summary" class=" btn btn-save">
                     <i class="fas fa-plus"></i> Insert into Note
                 </button>
                 <button type="button" id="discard-summary" class="btn btn-cancel">
@@ -506,6 +506,7 @@
     .btn-save {
         background: var(--primary);
         color: white;
+        width: 10%;
     }
 
     .btn-save:hover {
@@ -516,6 +517,7 @@
         background: var(--background);
         color: var(--text);
         border: 1px solid var(--border);
+        width: 10%;
     }
 
     .btn-cancel:hover {
@@ -660,6 +662,17 @@
         .ai-btn {
             margin-bottom: 0.5rem;
         }
+    }
+
+    #startMeetingBtn.disabled-btn {
+        background-color: #cccccc;
+        color: #666666;
+        cursor: not-allowed;
+        border-color: #aaaaaa;
+    }
+
+    #startMeetingBtn.disabled-btn:hover {
+        background-color: #cccccc;
     }
 </style>
 
@@ -879,58 +892,71 @@
         }
 
         // In your template script section
-        function startMeeting() {
-            const meetingLimitExceeded = {{ if .MeetingLimitExceeded }}true{{ else }}false{{ end }};
+        async function startMeeting() {
+            try {
+                // Get user's remaining time and subscription status from server
+                const isSubscribed = {{ .IsSubscribed }};
+                const remainingSeconds = {{ .RemainingSeconds }};
 
-            if (meetingLimitExceeded) {
-                alert("Free plan limit reached (5 minutes). Please upgrade to record longer meetings.");
-                stopMeeting()
-                return;
-            }
+                console.log(remainingSeconds)
 
-            // Existing start meeting code
-            if (!isMeetingRunning) {
-                recognitionRestartAttempts = 0;
-                if (!initSpeechRecognition()) {
-                    return;
+                // Existing start meeting code
+                if (!isMeetingRunning) {
+                    recognitionRestartAttempts = 0;
+                    if (!initSpeechRecognition()) {
+                        return;
+                    }
+
+                    try {
+                        speechRecognition.start();
+                        isMeetingRunning = true;
+                        startMeetingBtn.disabled = true;
+                        stopMeetingBtn.disabled = false;
+                        summarizeMeetingBtn.disabled = true;
+                        meetingTranscript = [];
+
+                        // Start timer with remaining time awareness
+                        let elapsedSeconds = 0;
+                        meetingInterval = setInterval(() => {
+                            elapsedSeconds++;
+
+                            if (!isSubscribed) {
+                                const newRemaining = remainingSeconds - elapsedSeconds;
+
+                                // Update display
+                                const displayMins = Math.floor(newRemaining / 60);
+                                const displaySecs = newRemaining % 60;
+                                meetingStatus.textContent = `Free plan: ${displayMins}m ${displaySecs}s remaining`;
+
+                                // Stop if time runs out
+                                if (newRemaining <= 0) {
+                                    startMeetingBtn.innerHTML = ` <a href="/subscription">Upgrade</a>`;
+
+                                    stopMeeting();
+                                    meetingStatus.textContent = "Free meeting time expired";
+                                    return;
+                                }
+                            } else {
+                                // Premium user display
+                                const minutes = Math.floor(elapsedSeconds / 60);
+                                const seconds = elapsedSeconds % 60;
+                                meetingStatus.textContent = `Meeting: ${minutes}m ${seconds}s`;
+                            }
+                        }, 1000);
+
+                        // Record meeting start
+                        await fetch('/api/meeting/start', {
+                            method: 'POST'
+                        });
+
+                    } catch (error) {
+                        console.error('Error starting meeting:', error);
+                        meetingStatus.textContent = "Error starting meeting";
+                    }
                 }
-
-                try {
-                    speechRecognition.start();
-                    isMeetingRunning = true;
-                    meetingStatus.textContent = "Meeting in progress...";
-                    startMeetingBtn.disabled = true;
-                    stopMeetingBtn.disabled = false;
-                    summarizeMeetingBtn.disabled = true;
-                    meetingTranscript = [];
-
-                    // Start timer
-                    let seconds = 0;
-                    meetingInterval = setInterval(() => {
-                        seconds++;
-                        const minutes = Math.floor(seconds / 60);
-                        const remainingSeconds = seconds % 60;
-                        meetingStatus.textContent = `Meeting in progress (${minutes}m ${remainingSeconds}s)...`;
-
-                        // Check if free user has reached 5 minutes
-                        if (!{{ if .IsSubscribed }}true{{ else }}false{{ end }} && seconds >= 300) {
-                            stopMeeting();
-                            alert("Free plan meeting limit reached (5 minutes). Meeting stopped automatically.");
-                        }
-                    }, 1000);
-
-                    // Update database with meeting start time
-                    fetch('/api/meeting/start', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        }
-                    }).catch(err => console.error('Error recording meeting start:', err));
-
-                } catch (error) {
-                    console.error('Error starting meeting:', error);
-                    meetingStatus.textContent = "Error starting meeting";
-                }
+            } catch (error) {
+                console.error('Error checking meeting status:', error);
+                meetingStatus.textContent = "Error checking meeting limits";
             }
         }
 

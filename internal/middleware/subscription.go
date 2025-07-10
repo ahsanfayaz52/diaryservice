@@ -20,7 +20,7 @@ func SubscriptionCheck(db *sql.DB, stripeSvc *stripe.Service) mux.MiddlewareFunc
 				return
 			}
 
-			noteLimitExceeded, meetingLimitExceeded, err := stripeSvc.CheckUserLimits(db, userID)
+			noteLimitExceeded, _, isSubscribed, err := stripeSvc.CheckUserLimits(db, userID)
 			if err != nil {
 				http.Error(w, "Failed to check subscription status", http.StatusInternalServerError)
 				return
@@ -28,8 +28,8 @@ func SubscriptionCheck(db *sql.DB, stripeSvc *stripe.Service) mux.MiddlewareFunc
 
 			// Store limits in context
 			ctx := context.WithValue(r.Context(), "subscription_limits", map[string]bool{
-				"note_limit_exceeded":    noteLimitExceeded,
-				"meeting_limit_exceeded": meetingLimitExceeded,
+				"note_limit_exceeded": noteLimitExceeded,
+				"isSubscribed":        isSubscribed,
 			})
 
 			next.ServeHTTP(w, r.WithContext(ctx))

@@ -136,7 +136,6 @@ func (h *SubscriptionHandler) getDefaultPriceID(productID string) string {
 }
 
 func (h *SubscriptionHandler) WebhookHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("Webhook received") // Add this
 	const MaxBodyBytes = int64(65536)
 	r.Body = http.MaxBytesReader(w, r.Body, MaxBodyBytes)
 	payload, err := io.ReadAll(r.Body)
@@ -145,16 +144,12 @@ func (h *SubscriptionHandler) WebhookHandler(w http.ResponseWriter, r *http.Requ
 		http.Error(w, "Error reading request body", http.StatusServiceUnavailable)
 		return
 	}
-	log.Printf("Payload: %s", string(payload)) // Add this (be careful with sensitive data)
-
-	signature := r.Header.Get("Stripe-Signature")
-	log.Printf("Signature: %s", signature) // Add this
 
 	event, err := webhook.ConstructEventWithOptions(
 		payload,
 		r.Header.Get("Stripe-Signature"),
-		h.stripeSvc.WebhookSecret(),
-		stripeapi.ConstructEventOptions{
+		h.stripeSvc.Config.WebhookSecret,
+		webhook.ConstructEventOptions{
 			IgnoreAPIVersionMismatch: true,
 		})
 	if err != nil {
@@ -162,8 +157,6 @@ func (h *SubscriptionHandler) WebhookHandler(w http.ResponseWriter, r *http.Requ
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	log.Printf("Processing event: %s", event.Type)
 
 	switch event.Type {
 	case "checkout.session.completed":
@@ -181,6 +174,7 @@ func (h *SubscriptionHandler) WebhookHandler(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
+		log.Printf("sub event: sub_is: %v, plan_id: %v, current_id %v, cust_id: %v", sub.ID, sub.Items.Data[0].Plan.ID, time.Unix(sub.CurrentPeriodEnd, 0), session.Customer.ID)
 		// Update user in database
 		_, err = h.db.Exec(`UPDATE users SET 
 			is_active = 1,
@@ -193,6 +187,7 @@ func (h *SubscriptionHandler) WebhookHandler(w http.ResponseWriter, r *http.Requ
 			time.Unix(sub.CurrentPeriodEnd, 0),
 			session.Customer.ID)
 		if err != nil {
+			log.Printf("err: %v", err)
 			http.Error(w, "Error updating user subscription", http.StatusInternalServerError)
 			return
 		}
@@ -336,6 +331,47 @@ func (h *SubscriptionHandler) MeetingEnd(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusOK)
 }
 
+func (h *SubscriptionHandler) CancelSubscription(w http.ResponseWriter, r *http.Request) {
+	userID := auth.GetUserIDFromContext(r.Context())
+	if userID == 0 {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Get user's subscription ID from database
+	var subscriptionID string
+	err := h.db.QueryRow("SELECT subscription_id FROM users WHERE id = ?", userID).Scan(&subscriptionID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "No subscription found", http.StatusBadRequest)
+			return
+		}
+		http.Error(w, "Failed to get subscription", http.StatusInternalServerError)
+		return
+	}
+
+	// Cancel subscription with Stripe
+	err = h.stripeSvc.CancelSubscription(subscriptionID)
+	if err != nil {
+		http.Error(w, "Failed to cancel subscription", http.StatusInternalServerError)
+		return
+	}
+
+	// Update user status in database
+	_, err = h.db.Exec(`UPDATE users SET 
+        is_active = 0,
+        subscription_id = NULL,
+        plan_id = NULL,
+        current_period_end = NULL
+        WHERE id = ?`, userID)
+	if err != nil {
+		http.Error(w, "Failed to update user status", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func (h *SubscriptionHandler) SubscriptionPageHandler(w http.ResponseWriter, r *http.Request) {
 	userID := auth.GetUserIDFromContext(r.Context())
 	if userID == 0 {
@@ -346,23 +382,42 @@ func (h *SubscriptionHandler) SubscriptionPageHandler(w http.ResponseWriter, r *
 	// Get user's current subscription status
 	var status struct {
 		IsActive       bool
-		PlanID         string
+		PlanID         sql.NullString
 		NoteCount      int
 		MeetingMinutes int
+		CurrentEndTime sql.NullTime
 	}
 
-	_ = h.db.QueryRow(`
-            SELECT u.is_active, u.plan_id, 
-                   COALESCE(ul.note_count, 0), 
-                   COALESCE(ul.meeting_seconds_used, 0)/60
-            FROM users u
-            LEFT JOIN user_limits ul ON u.id = ul.user_id
-            WHERE u.id = ?`, userID).Scan(
+	err := h.db.QueryRow(`
+    SELECT u.is_active, u.plan_id, 
+           COALESCE(ul.note_count, 0), 
+           COALESCE(ul.meeting_seconds_used, 0)/60,
+           u.current_period_end
+    FROM users u
+    LEFT JOIN user_limits ul ON u.id = ul.user_id
+    WHERE u.id = ?`, userID).Scan(
 		&status.IsActive,
 		&status.PlanID,
 		&status.NoteCount,
 		&status.MeetingMinutes,
+		&status.CurrentEndTime,
 	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+		log.Printf("Error querying subscription status: %v", err)
+		http.Error(w, "Error retrieving subscription status", http.StatusInternalServerError)
+		return
+	}
+
+	// Get plan name - handle NULL PlanID
+	planName := "Free"
+	if status.PlanID.Valid {
+		planName = getPlanName(status.PlanID.String, h.cfg)
+	}
 
 	tmpl := template.Must(template.ParseFiles(
 		"templates/base.html",
@@ -371,7 +426,8 @@ func (h *SubscriptionHandler) SubscriptionPageHandler(w http.ResponseWriter, r *
 
 	tmpl.ExecuteTemplate(w, "base.html", map[string]interface{}{
 		"IsActive":               status.IsActive,
-		"PlanName":               getPlanName(status.PlanID),
+		"PlanName":               planName,
+		"CurrentPeriodEnd":       status.CurrentEndTime.Time, // Will be zero time if NULL
 		"NoteCount":              status.NoteCount,
 		"MeetingMinutes":         status.MeetingMinutes,
 		"StripePublishableKey":   h.cfg.StripePublishableKey,
@@ -380,11 +436,11 @@ func (h *SubscriptionHandler) SubscriptionPageHandler(w http.ResponseWriter, r *
 	})
 }
 
-func getPlanName(planID string) string {
+func getPlanName(planID string, cfg *config.Config) string {
 	switch planID {
-	case "prod_monthly_id":
+	case cfg.StripeMonthlyPriceID:
 		return "premium"
-	case "prod_annual_id":
+	case cfg.StripeAnnualPriceID:
 		return "pro"
 	default:
 		return "Free"

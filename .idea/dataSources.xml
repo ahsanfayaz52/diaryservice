@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="go-diary" uuid="9c823b4d-80a2-4e5a-9cd3-82bf79e2f8c3">
+    <data-source source="LOCAL" name="go-diary" uuid="783e7cde-263d-4992-b83a-9d0e63aa2d3a">
       <driver-ref>sqlite.xerial</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>

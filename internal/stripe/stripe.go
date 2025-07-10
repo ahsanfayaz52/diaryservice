@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/stripe/stripe-go/v76"
+	"math"
 	"time"
 
 	"github.com/stripe/stripe-go/v76/customer"
@@ -19,6 +20,8 @@ type Config struct {
 	AnnualPlanID    string
 	FreeNoteLimit   int
 	FreeMeetingMins int
+	MonthlyPriceID  string
+	AnnualPriceID   string
 }
 
 type Service struct {
@@ -55,7 +58,7 @@ func (s *Service) CreateSubscription(customerID, planID string) (*stripe.Subscri
 
 func (s *Service) HandleWebhook(payload []byte, sigHeader string) (stripe.Event, error) {
 	return webhook.ConstructEventWithOptions(payload, sigHeader, s.Config.WebhookSecret,
-		stripe.ConstructEventOptions{
+		webhook.ConstructEventOptions{
 			IgnoreAPIVersionMismatch: true,
 		})
 }
@@ -64,35 +67,61 @@ func (s *Service) GetSubscription(subID string) (*stripe.Subscription, error) {
 	return subscription.Get(subID, nil)
 }
 
-func (s *Service) CheckUserLimits(db *sql.DB, userID int) (bool, bool, error) {
-	var noteCount, meetingSeconds int
-	var isActive bool
-	var subEnd sql.NullTime // Changed to sql.NullTime
+func (s *Service) CheckUserLimits(db *sql.DB, userID int) (noteLimitExceeded bool, remainingSeconds int, isSubscribed bool, err error) {
+	// Initialize default values
+	noteLimitExceeded = false
+	isSubscribed = false
+	remainingSeconds = 0
 
 	// Get user subscription status
-	err := db.QueryRow("SELECT is_active, current_period_end FROM users WHERE id = ?", userID).Scan(&isActive, &subEnd)
+	var subEnd sql.NullTime
+	err = db.QueryRow(`
+        SELECT is_active, current_period_end 
+        FROM users 
+        WHERE id = ?`, userID).Scan(&isSubscribed, &subEnd)
+
 	if err != nil {
 		if err == sql.ErrNoRows {
-			// User not found - handle appropriately
-			return true, true, nil // Or return an error if that's more appropriate
+			return true, 0, false, fmt.Errorf("user not found")
 		}
-		return false, false, fmt.Errorf("error getting subscription status: %w", err)
-	}
-
-	// Get user limits
-	err = db.QueryRow("SELECT COALESCE(note_count, 0), COALESCE(meeting_seconds_used, 0) FROM user_limits WHERE user_id = ?", userID).Scan(&noteCount, &meetingSeconds)
-	if err != nil && err != sql.ErrNoRows {
-		return false, false, fmt.Errorf("error getting user limits: %w", err)
+		return false, 0, false, fmt.Errorf("error getting subscription status: %w", err)
 	}
 
 	// Check if subscription is active
-	subscriptionActive := isActive && subEnd.Valid && subEnd.Time.After(time.Now())
+	subscriptionActive := isSubscribed && subEnd.Valid && subEnd.Time.After(time.Now())
 
-	// Check note limit (10 for free users)
-	noteLimitExceeded := !subscriptionActive && noteCount >= s.Config.FreeNoteLimit
+	// Get user limits
+	var noteCount, meetingSecondsUsed int
+	err = db.QueryRow(`
+        SELECT COALESCE(note_count, 0), COALESCE(meeting_seconds_used, 0) 
+        FROM user_limits 
+        WHERE user_id = ?`, userID).Scan(&noteCount, &meetingSecondsUsed)
 
-	// Check meeting limit (5 minutes for free users)
-	meetingLimitExceeded := !subscriptionActive && meetingSeconds >= s.Config.FreeMeetingMins*60
+	if err != nil && err != sql.ErrNoRows {
+		return false, 0, false, fmt.Errorf("error getting user limits: %w", err)
+	}
 
-	return noteLimitExceeded, meetingLimitExceeded, nil
+	// Calculate remaining meeting seconds
+	if subscriptionActive {
+		remainingSeconds = math.MaxInt32 // Unlimited for subscribed users
+	} else {
+		remainingSeconds = s.Config.FreeMeetingMins*60 - meetingSecondsUsed
+		if remainingSeconds < 0 {
+			remainingSeconds = 0
+		}
+	}
+
+	// Check note limit
+	noteLimitExceeded = !subscriptionActive && noteCount >= s.Config.FreeNoteLimit
+
+	return noteLimitExceeded, remainingSeconds, subscriptionActive, nil
+}
+
+func (s *Service) CancelSubscription(id string) error {
+	// Cancel the subscription immediately
+	_, err := subscription.Cancel(id, nil)
+	if err != nil {
+		return fmt.Errorf("failed to cancel subscription: %w", err)
+	}
+	return nil
 }
