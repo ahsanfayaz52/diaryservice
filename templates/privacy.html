@@ -1,0 +1,105 @@
+{{ define "content" }}
+<div class="legal-container">
+    <h1><i class="fas fa-shield-alt"></i> Privacy Policy</h1>
+    <p class="last-updated">Last Updated: July 11, 2025</p>
+
+    <div class="legal-section">
+        <h2>1. Information We Collect</h2>
+        <p>When you use AI Note Assistant, we collect:</p>
+        <ul>
+            <li><strong>Account Information:</strong> Email, name (if provided), and subscription status</li>
+            <li><strong>Note Content:</strong> Text, tags, and metadata of your notes</li>
+            <li><strong>Usage Data:</strong> Features used, session duration</li>
+            <li><strong>Payment Information:</strong> Processed securely via Stripe (we never store credit card details)</li>
+        </ul>
+    </div>
+
+    <div class="legal-section">
+        <h2>2. How We Use Your Data</h2>
+        <p>We use your information to:</p>
+        <ul>
+            <li>Provide and improve our services</li>
+            <li>Process subscriptions and payments</li>
+            <li>Implement AI features for note enhancement</li>
+            <li>Respond to support requests</li>
+            <li>Ensure security and prevent abuse</li>
+        </ul>
+    </div>
+
+    <div class="legal-section">
+        <h2>3. Data Security</h2>
+        <p>We implement:</p>
+        <ul>
+            <li>End-to-end encryption for all note content</li>
+            <li>Regular security audits</li>
+            <li>Two-factor authentication options</li>
+            <li>GDPR and CCPA compliance measures</li>
+        </ul>
+    </div>
+
+    <div class="legal-section">
+        <h2>4. Third-Party Services</h2>
+        <p>We integrate with:</p>
+        <ul>
+            <li><strong>Stripe:</strong> For payment processing</li>
+        </ul>
+    </div>
+
+    <div class="legal-section">
+        <h2>5. Your Rights</h2>
+        <p>You can:</p>
+        <ul>
+            <li>Access, edit, or delete your notes anytime</li>
+            <li>Export your data via button against each note</li>
+        </ul>
+    </div>
+
+    <div class="contact-section">
+        <h2>Contact Us</h2>
+        <p>For privacy concerns: <a href="mailto:ahsanfayaz52@gmail.com">ahsanfayaz52@gmail.com</a></p>
+    </div>
+</div>
+{{ end }}
+
+<style>
+    .legal-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 2rem;
+        line-height: 1.6;
+    }
+
+    .legal-container h1 {
+        color: #4f46e5;
+        margin-bottom: 0.5rem;
+    }
+
+    .last-updated {
+        color: #6b7280;
+        margin-bottom: 2rem;
+    }
+
+    .legal-section {
+        margin-bottom: 2rem;
+    }
+
+    .legal-section h2 {
+        color: #374151;
+        margin: 1.5rem 0 1rem;
+        font-size: 1.25rem;
+    }
+
+    .legal-section ul {
+        padding-left: 1.5rem;
+    }
+
+    .legal-section li {
+        margin-bottom: 0.5rem;
+    }
+
+    .contact-section {
+        margin-top: 3rem;
+        padding-top: 2rem;
+        border-top: 1px solid #e5e7eb;
+    }
+</style>

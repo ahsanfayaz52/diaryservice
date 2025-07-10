@@ -4,8 +4,10 @@ import (
 	"github.com/ahsanfayaz52/diaryservice/internal/middleware"
 	"github.com/ahsanfayaz52/diaryservice/internal/stripe"
 	"github.com/gorilla/mux"
+	"html/template"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/ahsanfayaz52/diaryservice/internal/auth"
 	"github.com/ahsanfayaz52/diaryservice/internal/config"
@@ -38,6 +40,39 @@ func main() {
 	r.HandleFunc("/ai/process", handlers.AIProcessHandler).Methods("POST")
 	r.HandleFunc("/ai/summarize-meeting", handlers.SummarizeMeetingHandler).Methods("POST")
 	r.HandleFunc("/api/subscription/webhook", subscriptionHandler.WebhookHandler).Methods("POST")
+
+	// In your main router setup (main.go or routes.go)
+	r.HandleFunc("/privacy", func(w http.ResponseWriter, r *http.Request) {
+		tmpl := template.Must(template.ParseFiles(
+			"templates/base.html",
+			"templates/privacy.html",
+		))
+
+		data := map[string]interface{}{
+			"CurrentPage": "privacy",
+			"CurrentYear": time.Now().Year(),
+		}
+
+		if err := tmpl.ExecuteTemplate(w, "base.html", data); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	})
+
+	r.HandleFunc("/terms", func(w http.ResponseWriter, r *http.Request) {
+		tmpl := template.Must(template.ParseFiles(
+			"templates/base.html",
+			"templates/terms.html",
+		))
+
+		data := map[string]interface{}{
+			"CurrentPage": "terms",
+			"CurrentYear": time.Now().Year(),
+		}
+
+		if err := tmpl.ExecuteTemplate(w, "base.html", data); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	})
 
 	// Authenticated routes
 	s := r.PathPrefix("/").Subrouter()
