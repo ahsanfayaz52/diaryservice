@@ -1,0 +1,328 @@
+{{ define "content" }}
+<div class="subscription-container">
+    <div class="subscription-header">
+        <h1><i class="fas fa-crown"></i> Upgrade Your Plan</h1>
+        <p class="subscription-subtitle">Unlock premium features and remove limits</p>
+    </div>
+
+    <div class="subscription-status">
+        <div class="status-card {{ if .IsActive }}active{{ else }}inactive{{ end }}">
+            <h3>Current Status</h3>
+            <p>
+                {{ if .IsActive }}
+                <i class="fas fa-check-circle"></i> Active Subscription ({{ .PlanName }})
+                {{ else }}
+                <i class="fas fa-exclamation-circle"></i> Free Plan
+                {{ end }}
+            </p>
+            {{ if .IsActive }}
+            <p>Renews on: {{ .CurrentPeriodEnd.Format "Jan 2, 2006" }}</p>
+            {{ else }}
+            <p>Free plan limits: {{ .NoteCount }}/10 notes, {{ .MeetingMinutes }}/60 meeting minutes</p>
+            <p>You can only create 10 notes regardless if you delete them</p>
+            {{ end }}
+        </div>
+    </div>
+
+    <div class="plans-container">
+        <div class="plan-card">
+            <h3>Free</h3>
+            <div class="price">$0/month</div>
+            <ul class="features">
+                <li><i class="fas fa-check"></i> 10 notes</li>
+                <li><i class="fas fa-check"></i> 60 minutes meeting recording</li>
+                <li><i class="fas fa-check"></i> Basic formatting</li>
+                <li><i class="fas fa-check"></i> AI enhancements</li>
+                <li><i class="fas fa-times"></i> Unlimited notes</li>
+                <li><i class="fas fa-times"></i> Unlimited meetings</li>
+            </ul>
+            <button class="btn btn-current" disabled>Current Plan</button>
+        </div>
+
+        <div class="plan-card featured">
+            <div class="popular-badge">Most Popular</div>
+            <h3>Premium</h3>
+            <div class="price">$9/month</div>
+            <ul class="features">
+                <li><i class="fas fa-check"></i> Unlimited notes</li>
+                <li><i class="fas fa-check"></i> unlimited minutes meeting recording</li>
+                <li><i class="fas fa-check"></i> Advanced formatting</li>
+                <li><i class="fas fa-check"></i> AI enhancements</li>
+                <li><i class="fas fa-check"></i> Meeting transcripts</li>
+                <li><i class="fas fa-check"></i> Priority support</li>
+            </ul>
+            <button class="btn btn-upgrade" onclick="startCheckout('premium')">Upgrade Now</button>
+        </div>
+
+        <div class="plan-card">
+            <h3>Pro</h3>
+            <div class="price">$90/year <span class="save">(Save 20%)</span></div>
+            <ul class="features">
+                <li><i class="fas fa-check"></i> Unlimited notes</li>
+                <li><i class="fas fa-check"></i> unlimited minutes meeting recording</li>
+                <li><i class="fas fa-check"></i> Advanced formatting</li>
+                <li><i class="fas fa-check"></i> AI enhancements</li>
+                <li><i class="fas fa-check"></i> Meeting transcripts</li>
+                <li><i class="fas fa-check"></i> Dedicated support</li>
+            </ul>
+            <button class="btn btn-upgrade" onclick="startCheckout('pro')">Upgrade Now</button>
+        </div>
+    </div>
+
+    {{ if .IsActive }}
+    <div class="cancel-subscription">
+        <button class="btn btn-cancel" onclick="cancelSubscription()">Cancel Subscription</button>
+        <p class="cancel-note">Your subscription will remain active until the end of the current billing period.</p>
+    </div>
+    {{ end }}
+</div>
+
+<script>
+    // In your subscription page or component
+    async function startCheckout(planType) {
+        console.log(planType)
+        try {
+            const response = await fetch('/api/subscription/checkout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    product_type: planType // "monthly" or "annual"
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.sessionId) {
+                const stripe = Stripe('{{ .StripePublishableKey }}');
+                stripe.redirectToCheckout({ sessionId: data.sessionId });
+            } else {
+                alert('Failed to create checkout session');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred while processing your request');
+        }
+    }
+
+    async function cancelSubscription() {
+        if (confirm('Are you sure you want to cancel your subscription? You will lose access to premium features at the end of your billing period.')) {
+            try {
+                const response = await fetch('/api/subscription/cancel', {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    alert('Subscription cancelled successfully');
+                    window.location.reload();
+                } else {
+                    alert('Failed to cancel subscription');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while cancelling your subscription');
+            }
+        }
+    }
+</script>
+
+<style>
+    .subscription-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .subscription-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .subscription-header h1 {
+        font-size: 2.5rem;
+        color: #4f46e5;
+        margin-bottom: 0.5rem;
+    }
+
+    .subscription-subtitle {
+        color: #6b7280;
+        font-size: 1.1rem;
+    }
+
+    .subscription-status {
+        margin-bottom: 3rem;
+    }
+
+    .status-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        max-width: 500px;
+        margin: 0 auto;
+        text-align: center;
+    }
+
+    .status-card h3 {
+        margin-top: 0;
+        color: #4f46e5;
+    }
+
+    .status-card p {
+        margin: 0.5rem 0;
+    }
+
+    .status-card.active {
+        border-top: 4px solid #10b981;
+    }
+
+    .status-card.inactive {
+        border-top: 4px solid #f59e0b;
+    }
+
+    .plans-container {
+        display: flex;
+        gap: 2rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-bottom: 3rem;
+    }
+
+    .plan-card {
+        background: white;
+        border-radius: 8px;
+        padding: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        flex: 1;
+        min-width: 300px;
+        max-width: 350px;
+        position: relative;
+    }
+
+    .plan-card.featured {
+        border: 2px solid #4f46e5;
+        transform: scale(1.05);
+    }
+
+    .popular-badge {
+        position: absolute;
+        top: -10px;
+        right: 20px;
+        background: #4f46e5;
+        color: white;
+        padding: 0.25rem 1rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+
+    .plan-card h3 {
+        font-size: 1.5rem;
+        margin-top: 0;
+        color: #4f46e5;
+    }
+
+    .price {
+        font-size: 2rem;
+        font-weight: bold;
+        margin: 1rem 0;
+    }
+
+    .save {
+        font-size: 0.9rem;
+        color: #10b981;
+        font-weight: normal;
+    }
+
+    .features {
+        list-style: none;
+        padding: 0;
+        margin: 2rem 0;
+    }
+
+    .features li {
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .features i {
+        margin-right: 0.5rem;
+        width: 1.25rem;
+        text-align: center;
+    }
+
+    .features .fa-check {
+        color: #10b981;
+    }
+
+    .features .fa-times {
+        color: #ef4444;
+    }
+
+    .btn {
+        display: inline-block;
+        padding: 0.75rem 1.5rem;
+        border-radius: 6px;
+        font-weight: 500;
+        text-align: center;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        width: 100%;
+    }
+
+    .btn-upgrade {
+        background: #4f46e5;
+        color: white;
+    }
+
+    .btn-upgrade:hover {
+        background: #4338ca;
+    }
+
+    .btn-current {
+        background: #e5e7eb;
+        color: #4b5563;
+        cursor: not-allowed;
+    }
+
+    .btn-cancel {
+        background: #fef2f2;
+        color: #dc2626;
+        border: 1px solid #fca5a5;
+    }
+
+    .btn-cancel:hover {
+        background: #fee2e2;
+    }
+
+    .cancel-subscription {
+        text-align: center;
+        margin-top: 3rem;
+    }
+
+    .cancel-note {
+        color: #6b7280;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+
+    @media (max-width: 768px) {
+        .plans-container {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .plan-card {
+            max-width: 100%;
+        }
+
+        .plan-card.featured {
+            transform: none;
+        }
+    }
+</style>
+{{ end }}

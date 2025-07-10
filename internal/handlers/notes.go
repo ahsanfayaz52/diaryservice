@@ -3,7 +3,9 @@ package handlers
 import (
 	"database/sql"
 	"github.com/ahsanfayaz52/diaryservice/internal/auth"
+	"github.com/ahsanfayaz52/diaryservice/internal/encryption"
 	"github.com/ahsanfayaz52/diaryservice/internal/models"
+	"github.com/ahsanfayaz52/diaryservice/internal/stripe"
 	"github.com/gorilla/mux"
 	"html/template"
 	"log"
@@ -12,9 +14,13 @@ import (
 	"strings"
 )
 
-func DashboardHandler(db *sql.DB) http.HandlerFunc {
+func DashboardHandler(db *sql.DB, encryptionSvc *encryption.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var isAuthenticated bool
 		userID := auth.GetUserIDFromContext(r.Context())
+		if userID != 0 {
+			isAuthenticated = true
+		}
 		query := r.URL.Query()
 
 		search := query.Get("search")
@@ -119,7 +125,14 @@ func DashboardHandler(db *sql.DB) http.HandlerFunc {
 		var notes []models.Note
 		for rows.Next() {
 			var n models.Note
+
 			if err := rows.Scan(&n.ID, &n.UserID, &n.Title, &n.Content, &n.Tags, &n.IsPinned, &n.IsStarred, &n.CreatedAt, &n.UpdatedAt); err == nil {
+				n.Content, err = encryptionSvc.Decrypt(n.Content)
+				if err != nil {
+					http.Error(w, "Failed to decrypt note", http.StatusInternalServerError)
+					return
+				}
+
 				notes = append(notes, n)
 			}
 		}
@@ -196,18 +209,19 @@ func DashboardHandler(db *sql.DB) http.HandlerFunc {
 		tmpl := template.Must(template.New("dashboard.html").Funcs(funcMap).ParseFiles("templates/dashboard.html", "templates/base.html"))
 
 		err = tmpl.ExecuteTemplate(w, "base.html", map[string]interface{}{
-			"Notes":         notes,
-			"TotalNotes":    totalNotes,
-			"PinnedCount":   pinnedCount,
-			"StarredCount":  starredCount,
-			"Search":        search,
-			"SelectedTags":  tags,
-			"TagCloud":      tagMap,
-			"FilterPinned":  filterPinned,
-			"FilterStarred": filterStarred,
-			"SortBy":        sortBy,
-			"Page":          page,
-			"TotalPages":    (totalCount + pageSize - 1) / pageSize,
+			"Notes":           notes,
+			"TotalNotes":      totalNotes,
+			"PinnedCount":     pinnedCount,
+			"StarredCount":    starredCount,
+			"Search":          search,
+			"SelectedTags":    tags,
+			"TagCloud":        tagMap,
+			"FilterPinned":    filterPinned,
+			"FilterStarred":   filterStarred,
+			"SortBy":          sortBy,
+			"Page":            page,
+			"TotalPages":      (totalCount + pageSize - 1) / pageSize,
+			"IsAuthenticated": isAuthenticated,
 		})
 		if err != nil {
 			log.Println("Template render error:", err)
@@ -215,29 +229,84 @@ func DashboardHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func NewNoteHandler(db *sql.DB) http.HandlerFunc {
+func NewNoteHandler(db *sql.DB, stripeSvc *stripe.Service, encryptionSvc *encryption.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var isAuthenticated bool
+
+		userID := auth.GetUserIDFromContext(r.Context())
+		if userID == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		} else {
+			isAuthenticated = true
+		}
+
+		noteLimitExceeded, remainingSeconds, isSubscribed, _ := stripeSvc.CheckUserLimits(db, userID)
+		if noteLimitExceeded {
+			http.Redirect(w, r, "/subscription?limit=notes", http.StatusSeeOther)
+			return
+		}
+
 		tmpl := template.Must(template.New("note_form.html").Funcs(template.FuncMap{
 			"safeHTML": func(s string) template.HTML { return template.HTML(s) },
 		}).ParseFiles("templates/note_form.html", "templates/base.html"))
 
 		if r.Method == http.MethodGet {
-			tmpl.ExecuteTemplate(w, "base.html", nil)
+			err := tmpl.ExecuteTemplate(w, "base.html", map[string]interface{}{
+				"IsSubscribed":     isSubscribed,
+				"RemainingSeconds": remainingSeconds,
+				"IsAuthenticated":  isAuthenticated,
+			})
+
+			if err != nil {
+				log.Printf("Template error: %v", err)
+				http.Error(w, "Error rendering template", http.StatusInternalServerError)
+			}
 			return
 		}
 
-		userID := auth.GetUserIDFromContext(r.Context())
 		title := r.FormValue("title")
 		content := r.FormValue("content")
 		tags := r.FormValue("tags")
 		isPinned := r.FormValue("is_pinned") == "on"
 		isStarred := r.FormValue("is_starred") == "on"
 
-		_, err := db.Exec(`INSERT INTO notes (user_id, title, content, tags, is_pinned, is_starred, created_at, updated_at)
+		encryptedContent, err := encryptionSvc.Encrypt(content)
+		if err != nil {
+			http.Error(w, "Failed to encrypt note", http.StatusInternalServerError)
+			return
+		}
+
+		// Start transaction
+		tx, err := db.Begin()
+		if err != nil {
+			http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback()
+
+		// Insert note
+		_, err = tx.Exec(`INSERT INTO notes (user_id, title, content, tags, is_pinned, is_starred, created_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-			userID, title, content, tags, isPinned, isStarred)
+			userID, title, encryptedContent, tags, isPinned, isStarred)
 		if err != nil {
 			http.Error(w, "Failed to save note", http.StatusInternalServerError)
+			return
+		}
+
+		// Update note count
+		_, err = tx.Exec(`INSERT INTO user_limits (user_id, note_count) 
+			VALUES (?, 1)
+			ON CONFLICT(user_id) DO UPDATE SET note_count = note_count + 1`,
+			userID)
+		if err != nil {
+			http.Error(w, "Failed to update note count", http.StatusInternalServerError)
+			return
+		}
+
+		// Commit transaction
+		if err := tx.Commit(); err != nil {
+			http.Error(w, "Failed to commit transaction", http.StatusInternalServerError)
 			return
 		}
 
@@ -245,8 +314,18 @@ func NewNoteHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func EditNoteHandler(db *sql.DB) http.HandlerFunc {
+func EditNoteHandler(db *sql.DB, stripeSvc *stripe.Service, encryptionSvc *encryption.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var isAuthenticated bool
+
+		userID := auth.GetUserIDFromContext(r.Context())
+		if userID == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		} else {
+			isAuthenticated = true
+		}
+
 		tmpl, err := template.New("base.html").Funcs(template.FuncMap{
 			"split":    strings.Split,
 			"safeHTML": func(s string) template.HTML { return template.HTML(s) },
@@ -260,11 +339,7 @@ func EditNoteHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		userID := auth.GetUserIDFromContext(r.Context())
-		if userID == 0 {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
+		_, remainingSeconds, isSubscribed, _ := stripeSvc.CheckUserLimits(db, userID)
 
 		vars := mux.Vars(r)
 		noteID, err := strconv.Atoi(vars["id"])
@@ -292,12 +367,21 @@ func EditNoteHandler(db *sql.DB) http.HandlerFunc {
 				return
 			}
 
+			note.Content, err = encryptionSvc.Decrypt(note.Content)
+			if err != nil {
+				http.Error(w, "Failed to decrypt note", http.StatusInternalServerError)
+				return
+			}
+
 			err = tmpl.ExecuteTemplate(w, "base.html", map[string]interface{}{
-				"Title":     note.Title,
-				"Content":   template.HTML(note.Content),
-				"Tags":      note.Tags,
-				"IsPinned":  note.IsPinned,
-				"IsStarred": note.IsStarred,
+				"Title":            note.Title,
+				"Content":          template.HTML(note.Content),
+				"Tags":             note.Tags,
+				"IsPinned":         note.IsPinned,
+				"IsStarred":        note.IsStarred,
+				"RemainingSeconds": remainingSeconds,
+				"IsSubscribed":     isSubscribed,
+				"IsAuthenticated":  isAuthenticated,
 			})
 			if err != nil {
 				http.Error(w, "Failed to render template", http.StatusInternalServerError)
@@ -317,6 +401,12 @@ func EditNoteHandler(db *sql.DB) http.HandlerFunc {
 			isPinned := r.FormValue("is_pinned") == "on"
 			isStarred := r.FormValue("is_starred") == "on"
 
+			encryptedContent, err := encryptionSvc.Encrypt(content)
+			if err != nil {
+				http.Error(w, "Failed to encrypt note", http.StatusInternalServerError)
+				return
+			}
+
 			if title == "" || content == "" {
 				http.Error(w, "Title and content are required", http.StatusBadRequest)
 				return
@@ -332,7 +422,7 @@ func EditNoteHandler(db *sql.DB) http.HandlerFunc {
                     is_starred = ?,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = ? AND user_id = ?`,
-				title, content, tags, isPinned, isStarred, noteID, userID,
+				title, encryptedContent, tags, isPinned, isStarred, noteID, userID,
 			)
 
 			if err != nil {
@@ -351,6 +441,11 @@ func EditNoteHandler(db *sql.DB) http.HandlerFunc {
 func DeleteNoteHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := auth.GetUserIDFromContext(r.Context())
+		if userID == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
 		vars := mux.Vars(r)
 		noteID, err := strconv.Atoi(vars["id"])
 		if err != nil {
@@ -368,9 +463,17 @@ func DeleteNoteHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func ViewNoteHandler(db *sql.DB) http.HandlerFunc {
+func ViewNoteHandler(db *sql.DB, encryptionSvc *encryption.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var isAuthenticated bool
+
 		userID := auth.GetUserIDFromContext(r.Context())
+		if userID == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		} else {
+			isAuthenticated = true
+		}
 		vars := mux.Vars(r)
 		noteID, err := strconv.Atoi(vars["id"])
 		if err != nil {
@@ -396,13 +499,20 @@ func ViewNoteHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		note.Content, err = encryptionSvc.Decrypt(note.Content)
+		if err != nil {
+			http.Error(w, "Failed to decrypt note", http.StatusInternalServerError)
+			return
+		}
+
 		tmpl := template.Must(template.New("view.html").Funcs(template.FuncMap{
 			"split":    strings.Split,
 			"safeHTML": func(s string) template.HTML { return template.HTML(s) },
 		}).ParseFiles("templates/view.html", "templates/base.html"))
 
 		err = tmpl.ExecuteTemplate(w, "base.html", map[string]interface{}{
-			"Note": note,
+			"Note":            note,
+			"IsAuthenticated": isAuthenticated,
 		})
 		if err != nil {
 			log.Println("Template render error:", err)

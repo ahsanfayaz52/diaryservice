@@ -137,7 +137,7 @@
         <div class="modal-body">
             <div id="summary-content" style="text-align: left; max-height: 60vh; overflow-y: auto;"></div>
             <div class="summary-actions">
-                <button type="button" id="insert-summary" class="btn btn-primary">
+                <button type="button" id="insert-summary" class=" btn btn-save">
                     <i class="fas fa-plus"></i> Insert into Note
                 </button>
                 <button type="button" id="discard-summary" class="btn btn-cancel">
@@ -506,6 +506,9 @@
     .btn-save {
         background: var(--primary);
         color: white;
+        padding: 0.5rem 1.25rem; /* Adjusted padding */
+        min-width: 120px; /* Reasonable minimum width */
+        width: auto; /* Let content determine width */
     }
 
     .btn-save:hover {
@@ -516,6 +519,9 @@
         background: var(--background);
         color: var(--text);
         border: 1px solid var(--border);
+        padding: 0.5rem 1.25rem; /* Matching padding */
+        min-width: 120px; /* Consistent with save button */
+        width: auto; /* Flexible width */
     }
 
     .btn-cancel:hover {
@@ -661,6 +667,17 @@
             margin-bottom: 0.5rem;
         }
     }
+
+    #startMeetingBtn.disabled-btn {
+        background-color: #cccccc;
+        color: #666666;
+        cursor: not-allowed;
+        border-color: #aaaaaa;
+    }
+
+    #startMeetingBtn.disabled-btn:hover {
+        background-color: #cccccc;
+    }
 </style>
 
 <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
@@ -732,7 +749,6 @@
         const stopMeetingBtn = document.getElementById('stop-meeting');
         const summarizeMeetingBtn = document.getElementById('summarize-meeting');
         const meetingStatus = document.getElementById('meeting-status');
-        const identifySpeakersCheckbox = document.getElementById('identify-speakers');
         const summaryModal = document.getElementById('summary-modal');
         const summaryContent = document.getElementById('summary-content');
         const insertSummaryBtn = document.getElementById('insert-summary');
@@ -743,9 +759,6 @@
         let meetingTranscript = [];
         let isMeetingRunning = false;
         let speechRecognition;
-        let lastSpeaker = '';
-        let speakerCount = 0;
-        let speakerMap = {};
 
         let recognitionRestartAttempts = 0;
         const MAX_RESTART_ATTEMPTS = 12;
@@ -789,56 +802,65 @@
                 }
             };
 
+            // Initialize these variables
+            let finalizedText = '';    // Stores all confirmed text
+            let currentInterim = '';   // Stores current partial recognition
+            let lastUpdateLength = 0;  // Length of last update
+
             speechRecognition.onresult = (event) => {
-                // Reset restart attempts counter on successful recognition
                 recognitionRestartAttempts = 0;
 
-                const identifySpeakers = identifySpeakersCheckbox.checked;
-                let interimTranscript = '';
-                let finalTranscript = '';
+                let newText = '';
+                let isFinal = false;
 
+                // Process all available results
                 for (let i = event.resultIndex; i < event.results.length; i++) {
-                    const transcript = event.results[i][0].transcript;
-                    if (event.results[i].isFinal) {
-                        finalTranscript += transcript;
+                    const result = event.results[i];
+                    const transcript = result[0].transcript;
+
+                    if (result.isFinal) {
+                        finalizedText += transcript + ' ';
+                        currentInterim = '';
+                        isFinal = true;
                     } else {
-                        interimTranscript += transcript;
-                    }
-                }
-
-                if (finalTranscript) {
-                    // Speaker identification logic
-                    let speakerTag = '';
-                    if (identifySpeakers) {
-                        // Simple speaker change detection
-                        if (!lastSpeaker || Math.random() > 0.7) { // Simulate speaker change
-                            speakerCount++;
-                            lastSpeaker = `Speaker ${speakerCount}`;
-                            speakerMap[lastSpeaker] = speakerMap[lastSpeaker] || getRandomColor();
+                        // Only update if we have new content
+                        if (transcript.length > currentInterim.length) {
+                            currentInterim = transcript;
                         }
-                        speakerTag = `<span class="transcript-speaker" style="color:${speakerMap[lastSpeaker]}">${lastSpeaker}: </span>`;
                     }
-
-                    const timestamp = new Date().toLocaleTimeString();
-                    const transcriptEntry = {
-                        speaker: lastSpeaker,
-                        text: finalTranscript,
-                        time: timestamp,
-                        html: `<div class="transcript-line"><span class="transcript-time">${timestamp}</span>${speakerTag}${finalTranscript}</div>`
-                    };
-
-                    meetingTranscript.push(transcriptEntry);
-
-                    // Append to editor
-                    const currentContent = quill.root.innerHTML;
-                    quill.clipboard.dangerouslyPasteHTML(
-                        currentContent + transcriptEntry.html
-                    );
-
-                    // Scroll to bottom
-                    quill.scroll.domNode.scrollTop = quill.scroll.domNode.scrollHeight;
                 }
+
+                // Get the editor's current state
+                const editorLength = quill.getLength();
+
+                // Always show the latest text (final + interim)
+                const displayText = finalizedText + currentInterim;
+
+                // Calculate how much to replace
+                const replaceLength = Math.max(lastUpdateLength, displayText.length);
+
+                // Replace the text in one operation
+                quill.deleteText(0, replaceLength);
+                quill.insertText(0, displayText);
+
+                // Track the length we just inserted
+                lastUpdateLength = displayText.length;
+
+                // Scroll horizontally to show the end
+                quill.scroll.domNode.scrollLeft = quill.scroll.domNode.scrollWidth;
             };
+
+// CSS to enforce single line
+            const style = document.createElement('style');
+            style.textContent = `
+    #quill-editor {
+        white-space: pre-wrap; /* Allow natural wrapping */
+        word-wrap: break-word; /* Break long words if needed */
+        overflow-y: auto; /* Vertical scroll only */
+        overflow-x: hidden; /* Prevent horizontal scroll */
+    }
+`;
+            document.head.appendChild(style);
 
             speechRecognition.onerror = (event) => {
                 console.error('Speech recognition error', event.error);
@@ -878,35 +900,76 @@
             return true;
         }
 
-        function startMeeting() {
-            if (isMeetingRunning) return;
-
-            recognitionRestartAttempts = 0; // Reset restart counter
-            if (!initSpeechRecognition()) {
-                return;
-            }
-
+        // In your template script section
+        async function startMeeting() {
             try {
-                speechRecognition.start();
-                isMeetingRunning = true;
-                meetingStatus.textContent = "Meeting in progress...";
-                startMeetingBtn.disabled = true;
-                stopMeetingBtn.disabled = false;
-                summarizeMeetingBtn.disabled = true;
-                meetingTranscript = []; // Reset transcript
+                // Get user's remaining time and subscription status from server
+                const limitsResponse = await fetch('/api/meeting/limits');
+                if (!limitsResponse.ok) throw new Error('Failed to get meeting limits');
 
-                // Start a timer to track meeting duration
-                let seconds = 0;
-                meetingInterval = setInterval(() => {
-                    seconds++;
-                    const minutes = Math.floor(seconds / 60);
-                    const remainingSeconds = seconds % 60;
-                    meetingStatus.textContent = `Meeting in progress (${minutes}m ${remainingSeconds}s)...`;
-                }, 1000);
+                const { isSubscribed, remainingSeconds } = await limitsResponse.json();
+                console.log('Latest limits:', { isSubscribed, remainingSeconds });
 
+
+                console.log(remainingSeconds)
+
+                // Existing start meeting code
+                if (!isMeetingRunning) {
+                    recognitionRestartAttempts = 0;
+                    if (!initSpeechRecognition()) {
+                        return;
+                    }
+
+                    try {
+                        speechRecognition.start();
+                        isMeetingRunning = true;
+                        startMeetingBtn.disabled = true;
+                        stopMeetingBtn.disabled = false;
+                        summarizeMeetingBtn.disabled = true;
+                        meetingTranscript = [];
+
+                        // Start timer with remaining time awareness
+                        let elapsedSeconds = 0;
+                        meetingInterval = setInterval(() => {
+                            elapsedSeconds++;
+
+                            if (!isSubscribed) {
+                                const newRemaining = remainingSeconds - elapsedSeconds;
+
+                                // Update display
+                                const displayMins = Math.floor(newRemaining / 60);
+                                const displaySecs = newRemaining % 60;
+                                meetingStatus.textContent = `Free plan: ${displayMins}m ${displaySecs}s remaining`;
+
+                                // Stop if time runs out
+                                if (newRemaining <= 0) {
+                                    startMeetingBtn.innerHTML = ` <a href="/subscription">Upgrade</a>`;
+
+                                    stopMeeting();
+                                    meetingStatus.textContent = "Free meeting time expired";
+                                    return;
+                                }
+                            } else {
+                                // Premium user display
+                                const minutes = Math.floor(elapsedSeconds / 60);
+                                const seconds = elapsedSeconds % 60;
+                                meetingStatus.textContent = `Meeting: ${minutes}m ${seconds}s`;
+                            }
+                        }, 1000);
+
+                        // Record meeting start
+                        await fetch('/api/meeting/start', {
+                            method: 'POST'
+                        });
+
+                    } catch (error) {
+                        console.error('Error starting meeting:', error);
+                        meetingStatus.textContent = "Error starting meeting";
+                    }
+                }
             } catch (error) {
-                console.error('Error starting meeting:', error);
-                meetingStatus.textContent = "Error starting meeting";
+                console.error('Error checking meeting status:', error);
+                meetingStatus.textContent = "Error checking meeting limits";
             }
         }
 
@@ -914,11 +977,11 @@
             if (!isMeetingRunning) return;
 
             try {
-                isMeetingRunning = false; // Set this first to prevent auto-restart
-                recognitionRestartAttempts = MAX_RESTART_ATTEMPTS; // Prevent any pending restarts
+                isMeetingRunning = false;
+                recognitionRestartAttempts = MAX_RESTART_ATTEMPTS;
 
                 if (speechRecognition) {
-                    speechRecognition.onend = null; // Remove the restart handler
+                    speechRecognition.onend = null;
                     speechRecognition.stop();
                 }
                 clearInterval(meetingInterval);
@@ -926,14 +989,26 @@
                 startMeetingBtn.disabled = false;
                 stopMeetingBtn.disabled = true;
                 summarizeMeetingBtn.disabled = false;
+
+                // Update database with meeting duration
+                fetch('/api/meeting/end', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                }).catch(err => console.error('Error recording meeting end:', err));
+
             } catch (error) {
                 console.error('Error stopping meeting:', error);
             }
         }
 
         async function summarizeMeeting() {
-            if (meetingTranscript.length === 0) {
-                meetingStatus.textContent = "No transcript to summarize";
+            // Get the current content from the editor
+            const editorText = quill.getText().trim();
+
+            if (!editorText) {
+                meetingStatus.textContent = "No text to summarize";
                 return;
             }
 
@@ -941,19 +1016,14 @@
             aiStatus.textContent = "Analyzing meeting transcript and generating summary...";
 
             try {
-                // Prepare transcript for API
-                const transcriptText = meetingTranscript.map(entry =>
-                    `${entry.speaker ? entry.speaker + ': ' : ''}${entry.text}`
-                ).join('\n');
-
-                // Call your actual API endpoint
                 const response = await fetch('/ai/summarize-meeting', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        transcript: transcriptText
+                        // Use the editor content which already contains all transcribed text
+                        transcript: editorText
                     })
                 });
 
@@ -963,21 +1033,18 @@
 
                 const result = await response.json();
 
-                // Display summary
                 summaryContent.innerHTML = `
-                <h3>Meeting Summary</h3>
-                <p>${result.summary || 'No summary generated'}</p>
-
-                <h3>Key Points</h3>
-                <ul>
-                    ${(result.key_points || ['No key points']).map(point => `<li>${point}</li>`).join('')}
-                </ul>
-
-                <h3>Action Items</h3>
-                <ul>
-                    ${(result.action_items || ['No action items']).map(item => `<li>${item}</li>`).join('')}
-                </ul>
-            `;
+            <h3>Meeting Summary</h3>
+            <p>${result.summary || 'No summary generated'}</p>
+            <h3>Key Points</h3>
+            <ul>
+                ${(result.key_points || ['No key points']).map(point => `<li>${point}</li>`).join('')}
+            </ul>
+            <h3>Action Items</h3>
+            <ul>
+                ${(result.action_items || ['No action items']).map(item => `<li>${item}</li>`).join('')}
+            </ul>
+        `;
 
                 showModal(false);
                 summaryModal.style.display = 'flex';
