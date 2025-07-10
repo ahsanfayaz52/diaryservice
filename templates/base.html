@@ -518,13 +518,12 @@
             </a>
         </div>
         <nav>
+            {{ if .IsAuthenticated }}
             <a href="/subscription" class="{{ if eq .CurrentPage "subscription" }}active{{ end }}">
             <i class="fas fa-crown"></i> Subscriptions</a>
-            <a href="/dashboard" class="{{ if eq .CurrentPage "dashboard" }}active{{ end }}">Dashboard</a>
             <a href="/notes/new" class="new-note-btn {{ if eq .CurrentPage "new" }}active{{ end }}">
             <i class="fas fa-plus"></i> New Note
             </a>
-            {{ if .IsAuthenticated }}
             <a href="/logout" class="logout-btn">
                 <i class="fas fa-sign-out-alt"></i> Logout
             </a>
