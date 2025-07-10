@@ -488,20 +488,23 @@
                 gap: 0.75rem;
             }
 
-            /* Subscription responsive styles */
-            .plans-container {
-                flex-direction: column;
+            /* Logout Button Styles */
+            .logout-btn {
+                padding: 0.5rem 1rem;
+                border-radius: 0.5rem;
+                color: var(--danger);
+                text-decoration: none;
+                display: flex;
                 align-items: center;
+                gap: 0.5rem;
+                transition: all 0.2s;
+                border: 1px solid var(--border);
             }
 
-            .plan-card {
-                max-width: 100%;
+            .logout-btn:hover {
+                background-color: #fee2e2;
+                color: var(--danger-dark);
             }
-
-            .plan-card.featured {
-                transform: none;
-            }
-        }
     </style>
 </head>
 <body>
@@ -514,21 +517,15 @@
             </a>
         </div>
         <nav>
+            <a href="/subscription" class="{{ if eq .CurrentPage "subscription" }}active{{ end }}">
+            <i class="fas fa-crown"></i> Subscriptions</a>
             <a href="/dashboard" class="{{ if eq .CurrentPage "dashboard" }}active{{ end }}">Dashboard</a>
             <a href="/notes/new" class="new-note-btn {{ if eq .CurrentPage "new" }}active{{ end }}">
             <i class="fas fa-plus"></i> New Note
             </a>
-            <a href="/subscription" class="{{ if eq .CurrentPage "subscription" }}active{{ end }}">
-            <i class="fas fa-crown"></i> Upgrade
+            <a href="/logout" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i> Logout
             </a>
-            <div class="user-menu">
-                <div class="user-avatar" title="Account">
-                    <i class="fas fa-user"></i>
-                </div>
-                <div class="dropdown-menu">
-                    <a href="/logout" class="logout-link">Logout</a>
-                </div>
-            </div>
         </nav>
     </div>
 </header>
