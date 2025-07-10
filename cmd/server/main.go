@@ -1,10 +1,11 @@
 package main
 
 import (
+	"github.com/ahsanfayaz52/diaryservice/internal/middleware"
+	"github.com/ahsanfayaz52/diaryservice/internal/stripe"
+	"github.com/gorilla/mux"
 	"log"
 	"net/http"
-
-	"github.com/gorilla/mux"
 
 	"github.com/ahsanfayaz52/diaryservice/internal/auth"
 	"github.com/ahsanfayaz52/diaryservice/internal/config"
@@ -18,6 +19,8 @@ func main() {
 	dbConn := db.InitDB(cfg.DatabasePath)
 	defer dbConn.Close()
 
+	stripeSvc := stripe.NewService(cfg.StripeConfig())
+
 	jwtService := auth.NewJWTService(cfg.JWTSecret)
 
 	r := mux.NewRouter()
@@ -26,18 +29,29 @@ func main() {
 		http.Redirect(w, r, "/login", http.StatusFound)
 	})
 
+	// Handlers
+	subscriptionHandler := handlers.NewSubscriptionHandler(dbConn, stripeSvc, cfg)
+
 	r.HandleFunc("/register", handlers.RegisterHandler(dbConn)).Methods("GET", "POST")
 	r.HandleFunc("/login", handlers.LoginHandler(dbConn, jwtService)).Methods("GET", "POST")
 	r.HandleFunc("/logout", handlers.LogoutHandler()).Methods("GET")
 	r.HandleFunc("/ai/process", handlers.AIProcessHandler).Methods("POST")
 	r.HandleFunc("/ai/summarize-meeting", handlers.SummarizeMeetingHandler).Methods("POST")
+	r.HandleFunc("/api/subscription/webhook", subscriptionHandler.WebhookHandler).Methods("POST")
 
 	// Authenticated routes
 	s := r.PathPrefix("/").Subrouter()
 	s.Use(auth.JWTMiddleware(jwtService))
+	s.Use(middleware.SubscriptionCheck(dbConn, stripeSvc))
+
+	s.HandleFunc("/subscription", subscriptionHandler.SubscriptionPageHandler).Methods("GET")
+	s.HandleFunc("/api/meeting/start", subscriptionHandler.MeetingStart).Methods("POST")
+	s.HandleFunc("/api/meeting/end", subscriptionHandler.MeetingEnd).Methods("POST")
+	s.HandleFunc("/api/subscription/checkout", subscriptionHandler.CreateCheckoutSession).Methods("POST")
+	s.HandleFunc("/api/subscription/status", subscriptionHandler.GetSubscriptionStatus).Methods("GET")
 
 	s.HandleFunc("/dashboard", handlers.DashboardHandler(dbConn)).Methods("GET")
-	s.HandleFunc("/notes/new", handlers.NewNoteHandler(dbConn)).Methods("GET", "POST")
+	s.HandleFunc("/notes/new", handlers.NewNoteHandler(dbConn, stripeSvc)).Methods("GET", "POST")
 	s.HandleFunc("/notes/edit/{id}", handlers.EditNoteHandler(dbConn)).Methods("GET", "POST")
 	s.HandleFunc("/notes/delete/{id}", handlers.DeleteNoteHandler(dbConn)).Methods("POST")
 	s.HandleFunc("/notes/view/{id}", handlers.ViewNoteHandler(dbConn)).Methods("GET")

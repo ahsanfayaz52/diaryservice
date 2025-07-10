@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"github.com/ahsanfayaz52/diaryservice/internal/auth"
 	"github.com/ahsanfayaz52/diaryservice/internal/models"
+	"github.com/ahsanfayaz52/diaryservice/internal/stripe"
 	"github.com/gorilla/mux"
 	"html/template"
 	"log"
@@ -215,8 +216,20 @@ func DashboardHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func NewNoteHandler(db *sql.DB) http.HandlerFunc {
+func NewNoteHandler(db *sql.DB, stripeSvc *stripe.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		userID := auth.GetUserIDFromContext(r.Context())
+		if userID == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		noteLimitExceeded, _, _ := stripeSvc.CheckUserLimits(db, userID)
+		if noteLimitExceeded {
+			http.Redirect(w, r, "/subscription?limit=notes", http.StatusSeeOther)
+			return
+		}
+
 		tmpl := template.Must(template.New("note_form.html").Funcs(template.FuncMap{
 			"safeHTML": func(s string) template.HTML { return template.HTML(s) },
 		}).ParseFiles("templates/note_form.html", "templates/base.html"))
@@ -226,18 +239,42 @@ func NewNoteHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		userID := auth.GetUserIDFromContext(r.Context())
 		title := r.FormValue("title")
 		content := r.FormValue("content")
 		tags := r.FormValue("tags")
 		isPinned := r.FormValue("is_pinned") == "on"
 		isStarred := r.FormValue("is_starred") == "on"
 
-		_, err := db.Exec(`INSERT INTO notes (user_id, title, content, tags, is_pinned, is_starred, created_at, updated_at)
+		// Start transaction
+		tx, err := db.Begin()
+		if err != nil {
+			http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback()
+
+		// Insert note
+		_, err = tx.Exec(`INSERT INTO notes (user_id, title, content, tags, is_pinned, is_starred, created_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
 			userID, title, content, tags, isPinned, isStarred)
 		if err != nil {
 			http.Error(w, "Failed to save note", http.StatusInternalServerError)
+			return
+		}
+
+		// Update note count
+		_, err = tx.Exec(`INSERT INTO user_limits (user_id, note_count) 
+			VALUES (?, 1)
+			ON CONFLICT(user_id) DO UPDATE SET note_count = note_count + 1`,
+			userID)
+		if err != nil {
+			http.Error(w, "Failed to update note count", http.StatusInternalServerError)
+			return
+		}
+
+		// Commit transaction
+		if err := tx.Commit(); err != nil {
+			http.Error(w, "Failed to commit transaction", http.StatusInternalServerError)
 			return
 		}
 

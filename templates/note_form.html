@@ -878,35 +878,59 @@
             return true;
         }
 
+        // In your template script section
         function startMeeting() {
-            if (isMeetingRunning) return;
+            const meetingLimitExceeded = {{ if .MeetingLimitExceeded }}true{{ else }}false{{ end }};
 
-            recognitionRestartAttempts = 0; // Reset restart counter
-            if (!initSpeechRecognition()) {
+            if (meetingLimitExceeded) {
+                alert("Free plan limit reached (5 minutes). Please upgrade to record longer meetings.");
+                stopMeeting()
                 return;
             }
 
-            try {
-                speechRecognition.start();
-                isMeetingRunning = true;
-                meetingStatus.textContent = "Meeting in progress...";
-                startMeetingBtn.disabled = true;
-                stopMeetingBtn.disabled = false;
-                summarizeMeetingBtn.disabled = true;
-                meetingTranscript = []; // Reset transcript
+            // Existing start meeting code
+            if (!isMeetingRunning) {
+                recognitionRestartAttempts = 0;
+                if (!initSpeechRecognition()) {
+                    return;
+                }
 
-                // Start a timer to track meeting duration
-                let seconds = 0;
-                meetingInterval = setInterval(() => {
-                    seconds++;
-                    const minutes = Math.floor(seconds / 60);
-                    const remainingSeconds = seconds % 60;
-                    meetingStatus.textContent = `Meeting in progress (${minutes}m ${remainingSeconds}s)...`;
-                }, 1000);
+                try {
+                    speechRecognition.start();
+                    isMeetingRunning = true;
+                    meetingStatus.textContent = "Meeting in progress...";
+                    startMeetingBtn.disabled = true;
+                    stopMeetingBtn.disabled = false;
+                    summarizeMeetingBtn.disabled = true;
+                    meetingTranscript = [];
 
-            } catch (error) {
-                console.error('Error starting meeting:', error);
-                meetingStatus.textContent = "Error starting meeting";
+                    // Start timer
+                    let seconds = 0;
+                    meetingInterval = setInterval(() => {
+                        seconds++;
+                        const minutes = Math.floor(seconds / 60);
+                        const remainingSeconds = seconds % 60;
+                        meetingStatus.textContent = `Meeting in progress (${minutes}m ${remainingSeconds}s)...`;
+
+                        // Check if free user has reached 5 minutes
+                        if (!{{ if .IsSubscribed }}true{{ else }}false{{ end }} && seconds >= 300) {
+                            stopMeeting();
+                            alert("Free plan meeting limit reached (5 minutes). Meeting stopped automatically.");
+                        }
+                    }, 1000);
+
+                    // Update database with meeting start time
+                    fetch('/api/meeting/start', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    }).catch(err => console.error('Error recording meeting start:', err));
+
+                } catch (error) {
+                    console.error('Error starting meeting:', error);
+                    meetingStatus.textContent = "Error starting meeting";
+                }
             }
         }
 
@@ -914,11 +938,11 @@
             if (!isMeetingRunning) return;
 
             try {
-                isMeetingRunning = false; // Set this first to prevent auto-restart
-                recognitionRestartAttempts = MAX_RESTART_ATTEMPTS; // Prevent any pending restarts
+                isMeetingRunning = false;
+                recognitionRestartAttempts = MAX_RESTART_ATTEMPTS;
 
                 if (speechRecognition) {
-                    speechRecognition.onend = null; // Remove the restart handler
+                    speechRecognition.onend = null;
                     speechRecognition.stop();
                 }
                 clearInterval(meetingInterval);
@@ -926,6 +950,15 @@
                 startMeetingBtn.disabled = false;
                 stopMeetingBtn.disabled = true;
                 summarizeMeetingBtn.disabled = false;
+
+                // Update database with meeting duration
+                fetch('/api/meeting/end', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                }).catch(err => console.error('Error recording meeting end:', err));
+
             } catch (error) {
                 console.error('Error stopping meeting:', error);
             }
