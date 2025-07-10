@@ -15,7 +15,11 @@ import (
 
 func DashboardHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var isAuthenticated bool
 		userID := auth.GetUserIDFromContext(r.Context())
+		if userID != 0 {
+			isAuthenticated = true
+		}
 		query := r.URL.Query()
 
 		search := query.Get("search")
@@ -197,18 +201,19 @@ func DashboardHandler(db *sql.DB) http.HandlerFunc {
 		tmpl := template.Must(template.New("dashboard.html").Funcs(funcMap).ParseFiles("templates/dashboard.html", "templates/base.html"))
 
 		err = tmpl.ExecuteTemplate(w, "base.html", map[string]interface{}{
-			"Notes":         notes,
-			"TotalNotes":    totalNotes,
-			"PinnedCount":   pinnedCount,
-			"StarredCount":  starredCount,
-			"Search":        search,
-			"SelectedTags":  tags,
-			"TagCloud":      tagMap,
-			"FilterPinned":  filterPinned,
-			"FilterStarred": filterStarred,
-			"SortBy":        sortBy,
-			"Page":          page,
-			"TotalPages":    (totalCount + pageSize - 1) / pageSize,
+			"Notes":           notes,
+			"TotalNotes":      totalNotes,
+			"PinnedCount":     pinnedCount,
+			"StarredCount":    starredCount,
+			"Search":          search,
+			"SelectedTags":    tags,
+			"TagCloud":        tagMap,
+			"FilterPinned":    filterPinned,
+			"FilterStarred":   filterStarred,
+			"SortBy":          sortBy,
+			"Page":            page,
+			"TotalPages":      (totalCount + pageSize - 1) / pageSize,
+			"IsAuthenticated": isAuthenticated,
 		})
 		if err != nil {
 			log.Println("Template render error:", err)
@@ -218,10 +223,14 @@ func DashboardHandler(db *sql.DB) http.HandlerFunc {
 
 func NewNoteHandler(db *sql.DB, stripeSvc *stripe.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var isAuthenticated bool
+
 		userID := auth.GetUserIDFromContext(r.Context())
 		if userID == 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
+		} else {
+			isAuthenticated = true
 		}
 
 		noteLimitExceeded, remainingSeconds, isSubscribed, _ := stripeSvc.CheckUserLimits(db, userID)
@@ -238,6 +247,7 @@ func NewNoteHandler(db *sql.DB, stripeSvc *stripe.Service) http.HandlerFunc {
 			err := tmpl.ExecuteTemplate(w, "base.html", map[string]interface{}{
 				"IsSubscribed":     isSubscribed,
 				"RemainingSeconds": remainingSeconds,
+				"IsAuthenticated":  isAuthenticated,
 			})
 
 			if err != nil {
@@ -292,6 +302,16 @@ func NewNoteHandler(db *sql.DB, stripeSvc *stripe.Service) http.HandlerFunc {
 
 func EditNoteHandler(db *sql.DB, stripeSvc *stripe.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var isAuthenticated bool
+
+		userID := auth.GetUserIDFromContext(r.Context())
+		if userID == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		} else {
+			isAuthenticated = true
+		}
+
 		tmpl, err := template.New("base.html").Funcs(template.FuncMap{
 			"split":    strings.Split,
 			"safeHTML": func(s string) template.HTML { return template.HTML(s) },
@@ -302,12 +322,6 @@ func EditNoteHandler(db *sql.DB, stripeSvc *stripe.Service) http.HandlerFunc {
 		)
 		if err != nil {
 			http.Error(w, "Failed to load templates", http.StatusInternalServerError)
-			return
-		}
-
-		userID := auth.GetUserIDFromContext(r.Context())
-		if userID == 0 {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
@@ -347,6 +361,7 @@ func EditNoteHandler(db *sql.DB, stripeSvc *stripe.Service) http.HandlerFunc {
 				"IsStarred":        note.IsStarred,
 				"RemainingSeconds": remainingSeconds,
 				"IsSubscribed":     isSubscribed,
+				"IsAuthenticated":  isAuthenticated,
 			})
 			if err != nil {
 				http.Error(w, "Failed to render template", http.StatusInternalServerError)
@@ -400,6 +415,11 @@ func EditNoteHandler(db *sql.DB, stripeSvc *stripe.Service) http.HandlerFunc {
 func DeleteNoteHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := auth.GetUserIDFromContext(r.Context())
+		if userID == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
 		vars := mux.Vars(r)
 		noteID, err := strconv.Atoi(vars["id"])
 		if err != nil {
@@ -419,7 +439,15 @@ func DeleteNoteHandler(db *sql.DB) http.HandlerFunc {
 
 func ViewNoteHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var isAuthenticated bool
+
 		userID := auth.GetUserIDFromContext(r.Context())
+		if userID == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		} else {
+			isAuthenticated = true
+		}
 		vars := mux.Vars(r)
 		noteID, err := strconv.Atoi(vars["id"])
 		if err != nil {
@@ -451,7 +479,8 @@ func ViewNoteHandler(db *sql.DB) http.HandlerFunc {
 		}).ParseFiles("templates/view.html", "templates/base.html"))
 
 		err = tmpl.ExecuteTemplate(w, "base.html", map[string]interface{}{
-			"Note": note,
+			"Note":            note,
+			"IsAuthenticated": isAuthenticated,
 		})
 		if err != nil {
 			log.Println("Template render error:", err)

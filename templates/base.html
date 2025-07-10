@@ -487,24 +487,25 @@
                 align-items: center;
                 gap: 0.75rem;
             }
+        }
 
-            /* Logout Button Styles */
-            .logout-btn {
-                padding: 0.5rem 1rem;
-                border-radius: 0.5rem;
-                color: var(--danger);
-                text-decoration: none;
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                transition: all 0.2s;
-                border: 1px solid var(--border);
-            }
+        /* Logout Button Styles */
+        .logout-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            color: var(--danger);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+            border: 1px solid var(--border);
+        }
 
-            .logout-btn:hover {
-                background-color: #fee2e2;
-                color: var(--danger-dark);
-            }
+        .logout-btn:hover {
+            background-color: #fee2e2;
+            color: var(--danger);
+        }
     </style>
 </head>
 <body>
@@ -523,9 +524,11 @@
             <a href="/notes/new" class="new-note-btn {{ if eq .CurrentPage "new" }}active{{ end }}">
             <i class="fas fa-plus"></i> New Note
             </a>
+            {{ if .IsAuthenticated }}
             <a href="/logout" class="logout-btn">
                 <i class="fas fa-sign-out-alt"></i> Logout
             </a>
+            {{ end }}
         </nav>
     </div>
 </header>
