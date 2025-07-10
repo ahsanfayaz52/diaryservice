@@ -91,6 +91,7 @@ func main() {
 	s.HandleFunc("/api/subscription/checkout", subscriptionHandler.CreateCheckoutSession).Methods("POST")
 	s.HandleFunc("/api/subscription/status", subscriptionHandler.GetSubscriptionStatus).Methods("GET")
 	s.HandleFunc("/api/subscription/cancel", subscriptionHandler.CancelSubscription).Methods("POST")
+	s.HandleFunc("/api/meeting/limits", handlers.MeetingLimitsHandler(dbConn, stripeSvc)).Methods("GET")
 
 	s.HandleFunc("/dashboard", handlers.DashboardHandler(dbConn, encryptionSvc)).Methods("GET")
 	s.HandleFunc("/notes/new", handlers.NewNoteHandler(dbConn, stripeSvc, encryptionSvc)).Methods("GET", "POST")

@@ -904,8 +904,12 @@
         async function startMeeting() {
             try {
                 // Get user's remaining time and subscription status from server
-                const isSubscribed = {{ .IsSubscribed }};
-                const remainingSeconds = {{ .RemainingSeconds }};
+                const limitsResponse = await fetch('/api/meeting/limits');
+                if (!limitsResponse.ok) throw new Error('Failed to get meeting limits');
+
+                const { isSubscribed, remainingSeconds } = await limitsResponse.json();
+                console.log('Latest limits:', { isSubscribed, remainingSeconds });
+
 
                 console.log(remainingSeconds)
 
