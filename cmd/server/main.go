@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/ahsanfayaz52/diaryservice/internal/encryption"
 	"github.com/ahsanfayaz52/diaryservice/internal/middleware"
 	"github.com/ahsanfayaz52/diaryservice/internal/stripe"
 	"github.com/gorilla/mux"
@@ -22,6 +23,11 @@ func main() {
 	defer dbConn.Close()
 
 	stripeSvc := stripe.NewService(cfg.StripeConfig())
+
+	encryptionSvc, err := encryption.NewService(cfg.EncryptionKey)
+	if err != nil {
+		log.Fatalf("Failed to initialize encryption service: %v", err)
+	}
 
 	jwtService := auth.NewJWTService(cfg.JWTSecret)
 
@@ -86,17 +92,17 @@ func main() {
 	s.HandleFunc("/api/subscription/status", subscriptionHandler.GetSubscriptionStatus).Methods("GET")
 	s.HandleFunc("/api/subscription/cancel", subscriptionHandler.CancelSubscription).Methods("POST")
 
-	s.HandleFunc("/dashboard", handlers.DashboardHandler(dbConn)).Methods("GET")
-	s.HandleFunc("/notes/new", handlers.NewNoteHandler(dbConn, stripeSvc)).Methods("GET", "POST")
-	s.HandleFunc("/notes/edit/{id}", handlers.EditNoteHandler(dbConn, stripeSvc)).Methods("GET", "POST")
+	s.HandleFunc("/dashboard", handlers.DashboardHandler(dbConn, encryptionSvc)).Methods("GET")
+	s.HandleFunc("/notes/new", handlers.NewNoteHandler(dbConn, stripeSvc, encryptionSvc)).Methods("GET", "POST")
+	s.HandleFunc("/notes/edit/{id}", handlers.EditNoteHandler(dbConn, stripeSvc, encryptionSvc)).Methods("GET", "POST")
 	s.HandleFunc("/notes/delete/{id}", handlers.DeleteNoteHandler(dbConn)).Methods("POST")
-	s.HandleFunc("/notes/view/{id}", handlers.ViewNoteHandler(dbConn)).Methods("GET")
+	s.HandleFunc("/notes/view/{id}", handlers.ViewNoteHandler(dbConn, encryptionSvc)).Methods("GET")
 
 	// Serve static files
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
 	log.Printf("Starting server on port %s...", cfg.Port)
-	err := http.ListenAndServe(":"+cfg.Port, r)
+	err = http.ListenAndServe(":"+cfg.Port, r)
 	if err != nil {
 		log.Fatal(err)
 	}

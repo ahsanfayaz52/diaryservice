@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"github.com/ahsanfayaz52/diaryservice/internal/auth"
+	"github.com/ahsanfayaz52/diaryservice/internal/encryption"
 	"github.com/ahsanfayaz52/diaryservice/internal/models"
 	"github.com/ahsanfayaz52/diaryservice/internal/stripe"
 	"github.com/gorilla/mux"
@@ -13,7 +14,7 @@ import (
 	"strings"
 )
 
-func DashboardHandler(db *sql.DB) http.HandlerFunc {
+func DashboardHandler(db *sql.DB, encryptionSvc *encryption.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var isAuthenticated bool
 		userID := auth.GetUserIDFromContext(r.Context())
@@ -124,7 +125,14 @@ func DashboardHandler(db *sql.DB) http.HandlerFunc {
 		var notes []models.Note
 		for rows.Next() {
 			var n models.Note
+
 			if err := rows.Scan(&n.ID, &n.UserID, &n.Title, &n.Content, &n.Tags, &n.IsPinned, &n.IsStarred, &n.CreatedAt, &n.UpdatedAt); err == nil {
+				n.Content, err = encryptionSvc.Decrypt(n.Content)
+				if err != nil {
+					http.Error(w, "Failed to decrypt note", http.StatusInternalServerError)
+					return
+				}
+
 				notes = append(notes, n)
 			}
 		}
@@ -221,7 +229,7 @@ func DashboardHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func NewNoteHandler(db *sql.DB, stripeSvc *stripe.Service) http.HandlerFunc {
+func NewNoteHandler(db *sql.DB, stripeSvc *stripe.Service, encryptionSvc *encryption.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var isAuthenticated bool
 
@@ -263,6 +271,12 @@ func NewNoteHandler(db *sql.DB, stripeSvc *stripe.Service) http.HandlerFunc {
 		isPinned := r.FormValue("is_pinned") == "on"
 		isStarred := r.FormValue("is_starred") == "on"
 
+		encryptedContent, err := encryptionSvc.Encrypt(content)
+		if err != nil {
+			http.Error(w, "Failed to encrypt note", http.StatusInternalServerError)
+			return
+		}
+
 		// Start transaction
 		tx, err := db.Begin()
 		if err != nil {
@@ -274,7 +288,7 @@ func NewNoteHandler(db *sql.DB, stripeSvc *stripe.Service) http.HandlerFunc {
 		// Insert note
 		_, err = tx.Exec(`INSERT INTO notes (user_id, title, content, tags, is_pinned, is_starred, created_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-			userID, title, content, tags, isPinned, isStarred)
+			userID, title, encryptedContent, tags, isPinned, isStarred)
 		if err != nil {
 			http.Error(w, "Failed to save note", http.StatusInternalServerError)
 			return
@@ -300,7 +314,7 @@ func NewNoteHandler(db *sql.DB, stripeSvc *stripe.Service) http.HandlerFunc {
 	}
 }
 
-func EditNoteHandler(db *sql.DB, stripeSvc *stripe.Service) http.HandlerFunc {
+func EditNoteHandler(db *sql.DB, stripeSvc *stripe.Service, encryptionSvc *encryption.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var isAuthenticated bool
 
@@ -353,6 +367,12 @@ func EditNoteHandler(db *sql.DB, stripeSvc *stripe.Service) http.HandlerFunc {
 				return
 			}
 
+			note.Content, err = encryptionSvc.Decrypt(note.Content)
+			if err != nil {
+				http.Error(w, "Failed to decrypt note", http.StatusInternalServerError)
+				return
+			}
+
 			err = tmpl.ExecuteTemplate(w, "base.html", map[string]interface{}{
 				"Title":            note.Title,
 				"Content":          template.HTML(note.Content),
@@ -381,6 +401,12 @@ func EditNoteHandler(db *sql.DB, stripeSvc *stripe.Service) http.HandlerFunc {
 			isPinned := r.FormValue("is_pinned") == "on"
 			isStarred := r.FormValue("is_starred") == "on"
 
+			encryptedContent, err := encryptionSvc.Encrypt(content)
+			if err != nil {
+				http.Error(w, "Failed to encrypt note", http.StatusInternalServerError)
+				return
+			}
+
 			if title == "" || content == "" {
 				http.Error(w, "Title and content are required", http.StatusBadRequest)
 				return
@@ -396,7 +422,7 @@ func EditNoteHandler(db *sql.DB, stripeSvc *stripe.Service) http.HandlerFunc {
                     is_starred = ?,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = ? AND user_id = ?`,
-				title, content, tags, isPinned, isStarred, noteID, userID,
+				title, encryptedContent, tags, isPinned, isStarred, noteID, userID,
 			)
 
 			if err != nil {
@@ -437,7 +463,7 @@ func DeleteNoteHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func ViewNoteHandler(db *sql.DB) http.HandlerFunc {
+func ViewNoteHandler(db *sql.DB, encryptionSvc *encryption.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var isAuthenticated bool
 
@@ -470,6 +496,12 @@ func ViewNoteHandler(db *sql.DB) http.HandlerFunc {
 				http.Error(w, "Failed to fetch note", http.StatusInternalServerError)
 				log.Println("View note error:", err)
 			}
+			return
+		}
+
+		note.Content, err = encryptionSvc.Decrypt(note.Content)
+		if err != nil {
+			http.Error(w, "Failed to decrypt note", http.StatusInternalServerError)
 			return
 		}
 
