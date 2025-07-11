@@ -185,7 +185,7 @@ func (h *SubscriptionHandler) WebhookHandler(w http.ResponseWriter, r *http.Requ
 		// Format as: "2006-01-02 15:04:05"
 		formattedTime := t.Format("2006-01-02 15:04:05")
 
-		log.Printf("sessoon.completed sub event: sub_is: %v, plan_id: %v, current_id %v, cust_id: %v", sub.ID, sub.Items.Data[0].Plan.ID, formattedTime, session.Customer.ID)
+		//log.Printf("sessoon.completed sub event: sub_is: %v, plan_id: %v, current_id %v, cust_id: %v", sub.ID, sub.Items.Data[0].Plan.ID, formattedTime, session.Customer.ID)
 		// Update user in database
 		_, err = h.db.Exec(`UPDATE users SET 
 			is_active = 1,
@@ -203,7 +203,7 @@ func (h *SubscriptionHandler) WebhookHandler(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-	case "invoice.payment_succeeded":
+	case "invoice.payment_succeed":
 		var invoice stripeapi.Invoice
 		err := json.Unmarshal(event.Data.Raw, &invoice)
 		if err != nil {
@@ -235,12 +235,20 @@ func (h *SubscriptionHandler) WebhookHandler(w http.ResponseWriter, r *http.Requ
 		}
 
 	case "customer.subscription.deleted", "customer.subscription.updated":
-		var sub stripeapi.Subscription
-		err := json.Unmarshal(event.Data.Raw, &sub)
+		var subscription stripeapi.Subscription
+		err := json.Unmarshal(event.Data.Raw, &subscription)
 		if err != nil {
 			http.Error(w, "Error parsing webhook JSON", http.StatusBadRequest)
 			return
 		}
+
+		sub, err := h.stripeSvc.GetSubscription(subscription.ID)
+		if err != nil {
+			log.Printf("Error getting subscription: %v", err)
+			http.Error(w, "Error getting subscription", http.StatusBadRequest)
+			return
+		}
+
 		var formattedTime string
 		if sub.CurrentPeriodEnd > 0 {
 			t := time.Unix(sub.CurrentPeriodEnd, 0).UTC()
