@@ -5,6 +5,7 @@ import (
 	"github.com/ahsanfayaz52/diaryservice/internal/middleware"
 	"github.com/ahsanfayaz52/diaryservice/internal/stripe"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 	"html/template"
 	"log"
 	"net/http"
@@ -17,9 +18,15 @@ import (
 )
 
 func main() {
+
+	err := godotenv.Load() // loads .env file into environment variables
+	if err != nil {
+		log.Println("No .env file found, continuing...")
+	}
+
 	cfg := config.LoadConfig()
 
-	dbConn := db.InitDB(cfg.DatabasePath)
+	dbConn := db.InitDB(cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBName)
 	defer dbConn.Close()
 
 	stripeSvc := stripe.NewService(cfg.StripeConfig())

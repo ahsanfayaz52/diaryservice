@@ -4,11 +4,9 @@ services:
     build: .
     ports:
       - "8080:8080"
-    environment:
-      - DATABASE_PATH=/app/data/go-diary.db
-      - JWT_SECRET=ahsanapp
-      - PORT=8080
-      - OPENAI=""
+    env_file:
+      - .env
+
     volumes:
       - ./data:/app/data
       - ./static:/app/static

@@ -287,7 +287,7 @@ func NewNoteHandler(db *sql.DB, stripeSvc *stripe.Service, encryptionSvc *encryp
 
 		// Insert note
 		_, err = tx.Exec(`INSERT INTO notes (user_id, title, content, tags, is_pinned, is_starred, created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+			VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())`,
 			userID, title, encryptedContent, tags, isPinned, isStarred)
 		if err != nil {
 			http.Error(w, "Failed to save note", http.StatusInternalServerError)
@@ -295,9 +295,9 @@ func NewNoteHandler(db *sql.DB, stripeSvc *stripe.Service, encryptionSvc *encryp
 		}
 
 		// Update note count
-		_, err = tx.Exec(`INSERT INTO user_limits (user_id, note_count) 
-			VALUES (?, 1)
-			ON CONFLICT(user_id) DO UPDATE SET note_count = note_count + 1`,
+		_, err = tx.Exec(`INSERT INTO user_limits (user_id, note_count)
+						VALUES (?, 1)
+						ON DUPLICATE KEY UPDATE note_count = note_count + 1`,
 			userID)
 		if err != nil {
 			http.Error(w, "Failed to update note count", http.StatusInternalServerError)

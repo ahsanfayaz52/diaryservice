@@ -4,6 +4,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	_ "fmt"
 	"github.com/ahsanfayaz52/diaryservice/internal/config"
 	"github.com/ahsanfayaz52/diaryservice/internal/stripe"
@@ -55,25 +56,31 @@ func (h *SubscriptionHandler) CreateCheckoutSession(w http.ResponseWriter, r *ht
 	}
 
 	// Get or create Stripe customer
-	var customerID string
+	var customerID sql.NullString
 	err = h.db.QueryRow("SELECT stripe_customer_id FROM users WHERE id = ?", userID).Scan(&customerID)
 	if err != nil && err != sql.ErrNoRows {
+		fmt.Println(err)
 		http.Error(w, "Failed to get customer ID", http.StatusInternalServerError)
 		return
 	}
 
-	if customerID == "" {
-		customerID, err = h.stripeSvc.CreateCustomer(email)
+	if !customerID.Valid || customerID.String == "" {
+		// Create Stripe customer
+		customerIDStr, err := h.stripeSvc.CreateCustomer(email)
 		if err != nil {
 			http.Error(w, "Failed to create customer", http.StatusInternalServerError)
 			return
 		}
 
-		_, err = h.db.Exec("UPDATE users SET stripe_customer_id = ? WHERE id = ?", customerID, userID)
+		// Save customer ID to DB
+		_, err = h.db.Exec("UPDATE users SET stripe_customer_id = ? WHERE id = ?", customerIDStr, userID)
 		if err != nil {
 			http.Error(w, "Failed to save customer ID", http.StatusInternalServerError)
 			return
 		}
+
+		customerID.String = customerIDStr
+		customerID.Valid = true
 	}
 
 	// Get the default price for the selected product
@@ -95,7 +102,7 @@ func (h *SubscriptionHandler) CreateCheckoutSession(w http.ResponseWriter, r *ht
 
 	// Create checkout session
 	params := &stripeapi.CheckoutSessionParams{
-		Customer: stripeapi.String(customerID),
+		Customer: stripeapi.String(customerID.String),
 		PaymentMethodTypes: stripeapi.StringSlice([]string{
 			"card",
 		}),
@@ -174,7 +181,11 @@ func (h *SubscriptionHandler) WebhookHandler(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		log.Printf("sub event: sub_is: %v, plan_id: %v, current_id %v, cust_id: %v", sub.ID, sub.Items.Data[0].Plan.ID, time.Unix(sub.CurrentPeriodEnd, 0), session.Customer.ID)
+		t := time.Unix(sub.CurrentPeriodEnd, 0).UTC()
+		// Format as: "2006-01-02 15:04:05"
+		formattedTime := t.Format("2006-01-02 15:04:05")
+
+		log.Printf("sessoon.completed sub event: sub_is: %v, plan_id: %v, current_id %v, cust_id: %v", sub.ID, sub.Items.Data[0].Plan.ID, formattedTime, session.Customer.ID)
 		// Update user in database
 		_, err = h.db.Exec(`UPDATE users SET 
 			is_active = 1,
@@ -184,7 +195,7 @@ func (h *SubscriptionHandler) WebhookHandler(w http.ResponseWriter, r *http.Requ
 			WHERE stripe_customer_id = ?`,
 			sub.ID,
 			sub.Items.Data[0].Plan.ID,
-			time.Unix(sub.CurrentPeriodEnd, 0),
+			formattedTime,
 			session.Customer.ID)
 		if err != nil {
 			log.Printf("err: %v", err)
@@ -208,10 +219,14 @@ func (h *SubscriptionHandler) WebhookHandler(w http.ResponseWriter, r *http.Requ
 				return
 			}
 
+			t := time.Unix(sub.CurrentPeriodEnd, 0).UTC()
+			// Format as: "2006-01-02 15:04:05"
+			formattedTime := t.Format("2006-01-02 15:04:05")
+			log.Printf("invoice: sub event: sub_is: %v, plan_id: %v, current_id %v", sub.ID, sub.Items.Data[0].Plan.ID, formattedTime)
 			_, err = h.db.Exec(`UPDATE users SET 
 				current_period_end = ?
 				WHERE subscription_id = ?`,
-				time.Unix(sub.CurrentPeriodEnd, 0),
+				formattedTime,
 				sub.ID)
 			if err != nil {
 				http.Error(w, "Error updating subscription period", http.StatusInternalServerError)
@@ -226,7 +241,15 @@ func (h *SubscriptionHandler) WebhookHandler(w http.ResponseWriter, r *http.Requ
 			http.Error(w, "Error parsing webhook JSON", http.StatusBadRequest)
 			return
 		}
+		var formattedTime string
+		if sub.CurrentPeriodEnd > 0 {
+			t := time.Unix(sub.CurrentPeriodEnd, 0).UTC()
+			formattedTime = t.Format("2006-01-02 15:04:05")
+		} else {
+			formattedTime = "NULL"
+		}
 
+		//log.Printf("subupdate, sub event: sub_is: %v, plan_id: %v, current_id %v", sub.ID, sub.Items.Data[0].Plan.ID, formattedTime)
 		// Update user subscription status
 		isActive := event.Type != "customer.subscription.deleted"
 		_, err = h.db.Exec(`UPDATE users SET 
@@ -234,7 +257,7 @@ func (h *SubscriptionHandler) WebhookHandler(w http.ResponseWriter, r *http.Requ
 			current_period_end = ?
 			WHERE subscription_id = ?`,
 			isActive,
-			time.Unix(sub.CurrentPeriodEnd, 0),
+			formattedTime,
 			sub.ID)
 		if err != nil {
 			http.Error(w, "Error updating subscription status", http.StatusInternalServerError)
@@ -292,8 +315,8 @@ func (h *SubscriptionHandler) MeetingStart(w http.ResponseWriter, r *http.Reques
 	}
 
 	_, err := h.db.Exec(`INSERT INTO user_limits (user_id, last_meeting_start) 
-		VALUES (?, CURRENT_TIMESTAMP)
-		ON CONFLICT(user_id) DO UPDATE SET last_meeting_start = CURRENT_TIMESTAMP`,
+					VALUES (?, NOW())
+					ON DUPLICATE KEY UPDATE last_meeting_start = NOW()`,
 		userID)
 	if err != nil {
 		http.Error(w, "Failed to record meeting start", http.StatusInternalServerError)
@@ -339,7 +362,7 @@ func (h *SubscriptionHandler) CancelSubscription(w http.ResponseWriter, r *http.
 	}
 
 	// Get user's subscription ID from database
-	var subscriptionID string
+	var subscriptionID sql.NullString
 	err := h.db.QueryRow("SELECT subscription_id FROM users WHERE id = ?", userID).Scan(&subscriptionID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -351,7 +374,7 @@ func (h *SubscriptionHandler) CancelSubscription(w http.ResponseWriter, r *http.
 	}
 
 	// Cancel subscription with Stripe
-	err = h.stripeSvc.CancelSubscription(subscriptionID)
+	err = h.stripeSvc.CancelSubscription(subscriptionID.String)
 	if err != nil {
 		http.Error(w, "Failed to cancel subscription", http.StatusInternalServerError)
 		return
@@ -391,7 +414,7 @@ func (h *SubscriptionHandler) SubscriptionPageHandler(w http.ResponseWriter, r *
 	err := h.db.QueryRow(`
     SELECT u.is_active, u.plan_id, 
            COALESCE(ul.note_count, 0), 
-           COALESCE(ul.meeting_seconds_used, 0)/60,
+           FLOOR(COALESCE(ul.meeting_seconds_used, 0)/60),
            u.current_period_end
     FROM users u
     LEFT JOIN user_limits ul ON u.id = ul.user_id
