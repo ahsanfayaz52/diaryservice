@@ -1,74 +1,373 @@
 {{ define "content" }}
 <div class="auth-container">
-    <div class="auth-card">
-        <div class="auth-header">
-            <i class="fas fa-book-open auth-logo"></i>
-            <h1>Welcome Back</h1>
-            <p class="auth-subtitle">Login to access your diary</p>
-        </div>
+    <div class="auth-grid">
+        <!-- Feature Showcase Panel -->
+        <div class="feature-panel">
+            <div class="feature-content">
+                <h2>Your Ultimate Note-Taking Companion With AI</h2>
+                <p class="feature-subtitle">Smart, Secure, and Always Available</p>
 
-        {{ if .Error }}
-        <div class="auth-error">
-            <i class="fas fa-exclamation-circle"></i>
-            <span>{{ .Error }}</span>
-        </div>
-        {{ end }}
+                <div class="feature-highlights">
+                    <div class="highlight-card">
+                        <i class="fas fa-shield-alt highlight-icon security"></i>
+                        <h3>Military-Grade Security</h3>
+                        <p>End-to-end encryption ensures your notes remain private</p>
+                    </div>
 
-        <form method="post" action="/login" autocomplete="off" class="auth-form">
-            <div class="form-group">
-                <label for="email">Email Address</label>
-                <div class="input-with-icon">
-                    <i class="fas fa-envelope"></i>
-                    <input type="email" id="email" name="email" placeholder="you@example.com"
-                           value="{{if .Email}}{{.Email}}{{end}}" required autofocus />
+                    <div class="highlight-card">
+                        <i class="fas fa-robot highlight-icon ai"></i>
+                        <h3>AI-Powered Tools</h3>
+                        <p>Enhance, summarize, and perfect your notes automatically</p>
+                    </div>
+                </div>
+
+                <div class="feature-list">
+                    <div class="feature-item">
+                        <div class="feature-badge">New</div>
+                        <div class="feature-text">
+                            <h3><i class="fas fa-video"></i> Smart Meeting Notes</h3>
+                            <p>60 free minutes: Start meetings and we'll generate detailed summaries automatically</p>
+                        </div>
+                    </div>
+
+                    <div class="feature-item">
+                        <div class="feature-text">
+                            <h3><i class="fas fa-tags"></i> Intelligent Organization</h3>
+                            <p>Group notes with tags, filter easily, and pin important notes</p>
+                        </div>
+                    </div>
+
+                    <div class="feature-item">
+                        <div class="feature-text">
+                            <h3><i class="fas fa-search"></i> Instant Search</h3>
+                            <p>Find anything in your notes with pinpoint accuracy</p>
+                        </div>
+                    </div>
+
+                    <div class="feature-item">
+                        <div class="feature-badge free">Free</div>
+                        <div class="feature-text">
+                            <h3><i class="fas fa-gift"></i> Get Started Free</h3>
+                            <p>10 free notes + 60 meeting minutes with no credit card required</p>
+                        </div>
+                    </div>
                 </div>
             </div>
+        </div>
 
-            <div class="form-group">
-                <label for="password">Password</label>
-                <div class="input-with-icon">
-                    <i class="fas fa-lock"></i>
-                    <input type="password" id="password" name="password" placeholder="••••••••" required />
+        <!-- Login Card -->
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="app-logo">
+                    <i class="fas fa-edit"></i>
+                    <span>AI Note Assistant</span>
                 </div>
+                <h1>Welcome Back</h1>
+                <p class="auth-subtitle">Access your secure notes anywhere</p>
             </div>
 
-            <div class="form-options">
-                <label class="remember-me">
-                    <input type="checkbox" name="remember">
-                    <span>Remember me</span>
-                </label>
-                <a href="/forgot-password" class="forgot-password">Forgot password?</a>
+            {{ if .Error }}
+            <div class="auth-error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>{{ .Error }}</span>
             </div>
+            {{ end }}
 
-            <button type="submit" class="auth-button">
-                <i class="fas fa-sign-in-alt"></i> Login
-            </button>
-        </form>
+            <form method="post" action="/login" autocomplete="off" class="auth-form">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <div class="input-with-icon">
+                        <i class="fas fa-envelope"></i>
+                        <input type="email" id="email" name="email" placeholder="you@example.com"
+                               value="{{if .Email}}{{.Email}}{{end}}" required autofocus />
+                    </div>
+                </div>
 
-        <div class="auth-footer">
-            <p>Don't have an account? <a href="/register" class="auth-link">Create one</a></p>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-with-icon">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="password" name="password" placeholder="••••••••" required />
+                    </div>
+                </div>
+
+                <div class="form-options">
+                    
+                    <a href="/forgot-password" class="forgot-password">Forgot password?</a>
+                </div>
+
+                <button type="submit" class="auth-button">
+                    <i class="fas fa-sign-in-alt"></i> Continue
+                </button>
+
+            </form>
+
+            <div class="auth-footer">
+                <p>Don't have an account? <a href="/register" class="auth-link">Sign up free</a></p>
+                <p class="trial-notice">Includes 10 free notes + 60 meeting minutes</p>
+            </div>
         </div>
     </div>
 </div>
 
 <style>
-    /* Auth Container Styles */
+    :root {
+        --primary: #5e35b1;
+        --primary-dark: #4527a0;
+        --primary-light: #7e57c2;
+        --secondary: #ede7f6;
+        --text: #263238;
+        --text-light: #546e7a;
+        --border: #cfd8dc;
+        --card-bg: #ffffff;
+        --feature-bg: linear-gradient(135deg, #5e35b1 0%, #3949ab 100%);
+        --error: #d32f2f;
+        --success: #388e3c;
+        --ai-color: #ff6d00;
+        --security-color: #00c853;
+    }
+
+    /* Layout Styles */
     .auth-container {
         display: flex;
         justify-content: center;
         align-items: center;
-        min-height: calc(100vh - 200px);
-        padding: 2rem;
+        min-height: 100vh;
+        background-color: #f5f5f5;
+        font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     }
 
-    .auth-card {
+    .auth-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        max-width: 1200px;
+        width: 95%;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
         background: var(--card-bg);
+        margin: 2rem 0;
+    }
+
+    /* Feature Panel */
+    .feature-panel {
+        background: var(--feature-bg);
+        color: white;
+        padding: 3rem 2.5rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .feature-panel::before {
+        content: "";
+        position: absolute;
+        top: -50px;
+        right: -50px;
+        width: 200px;
+        height: 200px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+    }
+
+    .feature-panel::after {
+        content: "";
+        position: absolute;
+        bottom: -80px;
+        left: -80px;
+        width: 300px;
+        height: 300px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 50%;
+    }
+
+    .feature-content h2 {
+        font-size: 2.2rem;
+        margin-bottom: 0.5rem;
+        font-weight: 700;
+        line-height: 1.3;
+        position: relative;
+        z-index: 1;
+    }
+
+    .feature-subtitle {
+        font-size: 1rem;
+        opacity: 0.9;
+        margin-bottom: 2.5rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .feature-highlights {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 2.5rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .highlight-card {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(5px);
+        padding: 1.5rem;
         border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-        padding: 2.5rem;
-        width: 100%;
-        max-width: 420px;
-        border: 1px solid var(--border);
+        transition: transform 0.3s ease;
+    }
+
+    .highlight-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .highlight-icon {
+        font-size: 1.8rem;
+        margin-bottom: 1rem;
+        display: inline-block;
+    }
+
+    .highlight-icon.security {
+        color: var(--security-color);
+    }
+
+    .highlight-icon.ai {
+        color: var(--ai-color);
+    }
+
+    .highlight-card h3 {
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+    }
+
+    .highlight-card p {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        line-height: 1.5;
+    }
+
+    .feature-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1.2rem;
+        margin-bottom: 2.5rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .feature-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 1rem;
+        border-radius: 10px;
+        transition: background 0.2s;
+    }
+
+    .feature-item:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .feature-badge {
+        background: var(--ai-color);
+        color: white;
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        margin-top: 0.2rem;
+    }
+
+    .feature-badge.free {
+        background: var(--success);
+    }
+
+    .feature-text h3 {
+        font-size: 1rem;
+        margin-bottom: 0.3rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .feature-text h3 i {
+        font-size: 0.9rem;
+    }
+
+    .feature-text p {
+        font-size: 0.85rem;
+        opacity: 0.9;
+        line-height: 1.5;
+    }
+
+    .testimonial-carousel {
+        position: relative;
+        z-index: 1;
+    }
+
+    .testimonial {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(5px);
+        padding: 1.5rem;
+        border-radius: 12px;
+    }
+
+    .testimonial p {
+        font-style: italic;
+        margin-bottom: 1rem;
+        line-height: 1.6;
+    }
+
+    .testimonial-author {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .testimonial-author img {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .author-name {
+        font-weight: 600;
+        font-size: 0.9rem;
+        display: block;
+    }
+
+    .author-title {
+        font-size: 0.8rem;
+        opacity: 0.8;
+    }
+
+    /* Auth Card */
+    .auth-card {
+        padding: 3rem 2.5rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        background: var(--card-bg);
+    }
+
+    .app-logo {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: 1rem;
+        justify-content: center;
+    }
+
+    .app-logo i {
+        font-size: 1.8rem;
     }
 
     .auth-header {
@@ -76,16 +375,11 @@
         margin-bottom: 2rem;
     }
 
-    .auth-logo {
-        font-size: 2.5rem;
-        color: var(--primary);
-        margin-bottom: 1rem;
-    }
-
     .auth-header h1 {
-        font-size: 1.75rem;
+        font-size: 1.8rem;
         color: var(--text);
         margin-bottom: 0.5rem;
+        font-weight: 600;
     }
 
     .auth-subtitle {
@@ -132,13 +426,26 @@
         border-radius: 8px;
         font-size: 0.95rem;
         transition: all 0.2s;
-        background-color: var(--secondary);
+        background-color: #fafafa;
     }
 
     .input-with-icon input:focus {
         outline: none;
         border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+        box-shadow: 0 0 0 3px rgba(94, 53, 177, 0.15);
+        background: white;
+    }
+
+    .password-toggle {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: var(--text-light);
+        cursor: pointer;
+        font-size: 0.95rem;
     }
 
     /* Form Options */
@@ -167,6 +474,7 @@
         color: var(--primary);
         text-decoration: none;
         transition: color 0.2s;
+        font-size: 0.9rem;
     }
 
     .forgot-password:hover {
@@ -179,7 +487,7 @@
         background-color: var(--primary);
         color: white;
         border: none;
-        padding: 0.75rem 1rem;
+        padding: 0.85rem 1rem;
         border-radius: 8px;
         font-size: 1rem;
         font-weight: 500;
@@ -189,16 +497,72 @@
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
+        margin-top: 0.5rem;
     }
 
     .auth-button:hover {
         background-color: var(--primary-dark);
         transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+        box-shadow: 0 4px 12px rgba(94, 53, 177, 0.25);
     }
 
     .auth-button:active {
         transform: translateY(0);
+    }
+
+    /* Divider */
+    .auth-divider {
+        display: flex;
+        align-items: center;
+        margin: 1rem 0;
+        color: var(--text-light);
+        font-size: 0.85rem;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+        content: "";
+        flex: 1;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .auth-divider span {
+        padding: 0 1rem;
+    }
+
+    /* Social Login */
+    .social-login {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .social-button {
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        border: 1px solid var(--border);
+        background: white;
+    }
+
+    .social-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .social-button.google {
+        color: #5f6368;
+    }
+
+    .social-button.apple {
+        color: #000000;
     }
 
     /* Footer Styles */
@@ -219,21 +583,17 @@
         text-decoration: underline;
     }
 
-    /* Responsive */
-    @media (max-width: 480px) {
-        .auth-card {
-            padding: 1.5rem;
-        }
-
-        .auth-container {
-            padding: 1rem;
-            min-height: calc(100vh - 150px);
-        }
+    .trial-notice {
+        margin-top: 0.5rem;
+        font-size: 0.8rem;
+        color: var(--text-light);
+        opacity: 0.8;
     }
 
+    /* Error Styles */
     .auth-error {
-        background-color: #fee2e2;
-        color: #b91c1c;
+        background-color: #ffebee;
+        color: var(--error);
         padding: 0.75rem 1rem;
         border-radius: 8px;
         margin-bottom: 1.5rem;
@@ -246,5 +606,66 @@
     .auth-error i {
         font-size: 1rem;
     }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+        .auth-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .feature-panel {
+            padding: 2rem 1.5rem;
+        }
+
+        .auth-card {
+            padding: 2rem 1.5rem;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .feature-highlights {
+            grid-template-columns: 1fr;
+        }
+
+        .auth-grid {
+            width: 100%;
+            border-radius: 0;
+            margin: 0;
+        }
+
+        .auth-container {
+            min-height: 100vh;
+            align-items: flex-start;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .feature-panel::before,
+        .feature-panel::after {
+            display: none;
+        }
+
+        .form-options {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+    }
 </style>
+
+<script>
+    // Toggle password visibility
+    document.querySelector('.password-toggle')?.addEventListener('click', function() {
+        const passwordInput = document.getElementById('password');
+        const icon = this.querySelector('i');
+
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            icon.classList.replace('fa-eye', 'fa-eye-slash');
+        } else {
+            passwordInput.type = 'password';
+            icon.classList.replace('fa-eye-slash', 'fa-eye');
+        }
+    });
+</script>
 {{ end }}

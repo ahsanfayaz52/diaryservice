@@ -506,6 +506,17 @@
             background-color: #fee2e2;
             color: var(--danger);
         }
+        .footer-email {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .footer-email i {
+            color: var(--primary);
+        }
     </style>
 </head>
 <body>
@@ -542,7 +553,11 @@
             <a href="/about">About</a>
             <a href="/privacy">Privacy</a>
             <a href="/terms">Terms</a>
-            <a href="/contact">Contact</a>
+        </div>
+        <div class="footer-links">
+            <a href="mailto:your.email@example.com" class="footer-email">
+                <i class="fas fa-envelope"></i> ahsanfayaz52@gmail.com
+            </a>
         </div>
         <div class="footer-social">
             <a href="#"><i class="fab fa-twitter"></i></a>

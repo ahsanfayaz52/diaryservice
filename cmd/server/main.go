@@ -87,6 +87,19 @@ func main() {
 		}
 	})
 
+	r.HandleFunc("/about", func(w http.ResponseWriter, r *http.Request) {
+		tmpl := template.Must(template.ParseFiles(
+			"templates/base.html",
+			"templates/about.html",
+		))
+
+		data := map[string]interface{}{}
+
+		if err := tmpl.ExecuteTemplate(w, "base.html", data); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	})
+
 	// Authenticated routes
 	s := r.PathPrefix("/").Subrouter()
 	s.Use(auth.JWTMiddleware(jwtService))
