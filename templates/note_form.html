@@ -1004,7 +1004,6 @@
         }
 
         async function summarizeMeeting() {
-            // Get the current content from the editor
             const editorText = quill.getText().trim();
 
             if (!editorText) {
@@ -1022,7 +1021,6 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        // Use the editor content which already contains all transcribed text
                         transcript: editorText
                     })
                 });
@@ -1033,16 +1031,76 @@
 
                 const result = await response.json();
 
+                // Formatting functions
+                const formatList = (items, itemFormatter) => {
+                    if (!items || items.length === 0) return '<li>None identified</li>';
+                    return items.map(itemFormatter).join('');
+                };
+
+                const formatActionItem = (item) => {
+                    const content = `
+        ${item.Task ? `<strong>${item.Task}</strong>` : ''}
+        ${item.Owner ? `<br>Owner: ${item.Owner}` : ''}
+        ${item.Deadline ? `<br>Deadline: ${item.Deadline}` : ''}
+        ${item.Dependencies?.length ? `<br>Dependencies: ${item.Dependencies.join(', ')}` : ''}
+    `.trim();
+
+                    return content.replace(/<br>\s*$/, '') ? `<li>${content}</li>` : '';
+                };
+
+
+                const formatDecision = (decision) => {
+                    const content = `
+        ${decision.Description ? `<strong>${decision.Description}</strong>` : ''}
+        ${decision.Rationale ? `<br>Rationale: ${decision.Rationale}` : ''}
+        ${decision.Alternatives?.length ? `
+            <br>Alternatives considered:
+            <ul>${decision.Alternatives.map(alt => `<li>${alt}</li>`).join('')}</ul>
+        ` : ''}
+    `.trim();
+
+                    return content.replace(/<br>\s*$/, '') ? `<li>${content}</li>` : '';
+                };
+
+
+                const formatFollowUp = (followUp) => {
+                    const content = `
+        ${followUp.Action ? `<strong>${followUp.Action}</strong>` : ''}
+        ${followUp.Responsible ? `<br>Responsible: ${followUp.Responsible}` : ''}
+        ${followUp.Timeline ? `<br>Timeline: ${followUp.Timeline}` : ''}
+    `.trim();
+
+                    return content.replace(/<br>\s*$/, '') ? `<li>${content}</li>` : '';
+                };
+
+
                 summaryContent.innerHTML = `
             <h3>Meeting Summary</h3>
-            <p>${result.summary || 'No summary generated'}</p>
+            <p>${result.Summary || 'No summary generated'}</p>
+
+            <h3>Participants</h3>
+            <ul>
+                ${formatList(result.Participants, p => `<li>${p}</li>`)}
+            </ul>
+
             <h3>Key Points</h3>
             <ul>
-                ${(result.key_points || ['No key points']).map(point => `<li>${point}</li>`).join('')}
+                ${formatList(result.KeyPoints, kp => `<li>${kp}</li>`)}
             </ul>
+
             <h3>Action Items</h3>
             <ul>
-                ${(result.action_items || ['No action items']).map(item => `<li>${item}</li>`).join('')}
+                ${formatList(result.ActionItems, formatActionItem)}
+            </ul>
+
+            <h3>Decisions Made</h3>
+            <ul>
+                ${formatList(result.Decisions, formatDecision)}
+            </ul>
+
+            <h3>Follow Ups</h3>
+            <ul>
+                ${formatList(result.FollowUps, formatFollowUp)}
             </ul>
         `;
 
@@ -1057,10 +1115,20 @@
         }
 
         function insertSummary() {
-            const summaryHtml = summaryContent.innerHTML;
+            let summaryHtml = summaryContent.innerHTML;
+
+            // Remove any empty <li> tags including those with only <br>, &nbsp;, or whitespace
+            summaryHtml = summaryHtml.replace(/<li>(\s|&nbsp;|<br\s*\/?>)*<\/li>/gi, '');
+
+            // Optional: Also clean up empty <ul> or <ol> tags if they result from all items being removed
+            summaryHtml = summaryHtml.replace(/<ul>\s*<\/ul>/gi, '');
+            summaryHtml = summaryHtml.replace(/<ol>\s*<\/ol>/gi, '');
+
             quill.clipboard.dangerouslyPasteHTML(summaryHtml);
             summaryModal.style.display = 'none';
         }
+
+
 
         function discardSummary() {
             summaryModal.style.display = 'none';
